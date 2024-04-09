@@ -1,6 +1,6 @@
 use async_graphql::{Context, InputObject, Object, Result};
 
-use chrono::NaiveDate;
+use chrono::{NaiveDate, Utc};
 use diesel_async::{pooled_connection::deadpool::Pool, AsyncPgConnection, RunQueryDsl};
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
@@ -54,10 +54,10 @@ impl AddUser {
             })
             .unwrap();
         let password_hash = hasher.hash_password(input.password_hash.clone()).unwrap();
-        let my_uuid = Uuid::new_v4();
+        let email_verification_code = Uuid::new_v4();
 
         let date_of_birth = NaiveDate::parse_from_str(&input.date_of_birth, "%Y-%m-%d")?;
-        let created_at = Naivedate::parse
+        let now = Utc::now().naive_utc();
 
         let new_user = NewUser {
             first_name: input.first_name,
@@ -66,14 +66,17 @@ impl AddUser {
             username: input.username,
             email_address: input.email_address,
             display_name: input.display_name,
+            email_verified: false,
+            email_verification_code,
+            email_verification_code_expiry: Utc::now().naive_utc() + chrono::Duration::hours(24),
             date_of_birth,
             password_hash,
-            created_at: todo!(),
-            updated_at: todo!(),
+            created_at: now,
+            updated_at: now,
         };
 
         let pool: &Pool<AsyncPgConnection> = ctx.data()?;
-        let conn = pool.get().await?;
+        let mut conn = pool.get().await?;
 
         let created_user: User = diesel::insert_into(users)
             .values(new_user)

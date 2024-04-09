@@ -1,11 +1,7 @@
-
-
-
 use actix_web::{cookie::Key, guard, web, web::Data, App, HttpResponse, HttpServer, Result};
 use async_graphql::{http::GraphiQLSource, EmptySubscription, Schema};
 use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse};
 use diesel_async::pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager};
-use photos::password::PassWordHasher;
 
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use photos::graphql_schema::{Mutation, Query};
@@ -14,7 +10,6 @@ use photos::InternalError;
 pub type ApplicationSchema = Schema<Query, Mutation, EmptySubscription>;
 
 async fn index(schema: web::Data<ApplicationSchema>, req: GraphQLRequest) -> GraphQLResponse {
-    let hasher = PassWordHasher::new();
     schema.execute(req.into_inner()).await.into()
 }
 
