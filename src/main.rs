@@ -5,6 +5,8 @@ use diesel_async::pooled_connection::{deadpool::Pool, AsyncDieselConnectionManag
 
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use photos::graphql_schema::{Mutation, Query};
+
+use photos::password::PassWordHasher;
 use photos::InternalError;
 
 pub type ApplicationSchema = Schema<Query, Mutation, EmptySubscription>;
@@ -31,9 +33,10 @@ async fn main() -> Result<(), InternalError> {
 
     let config = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(database_url);
     let pool = Pool::builder(config).build()?;
-
+    let password_hasher = PassWordHasher::new();
     let schema = Schema::build(Query::default(), Mutation::default(), EmptySubscription)
         .data(pool)
+        .data(password_hasher)
         .finish();
 
     println!("GraphiQL IDE: http://localhost:8000");
