@@ -38,7 +38,6 @@ impl Verify {
             .map_err(|_| "Email address not found")?;
 
         if Utc::now().naive_utc() > email_addr.verification_code_expires_at {
-            // Resend the verification email using BrevoApi
             brevo
                 .send_verification_email(email_addr.email, email_addr.verification_code)
                 .await?;

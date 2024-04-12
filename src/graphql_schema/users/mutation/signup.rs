@@ -1,9 +1,3 @@
-use std::env;
-use async_graphql::{Context, InputObject, Object, Result};
-use chrono::{Duration, NaiveDate, Utc};
-use diesel_async::{pooled_connection::deadpool::Pool, AsyncPgConnection, RunQueryDsl};
-use uuid::Uuid;
-use validator::{Validate, ValidationError};
 use crate::mailer::BrevoApi;
 use crate::models::NewEmailAddress;
 use crate::{
@@ -11,6 +5,12 @@ use crate::{
     models::{NewUser, User},
     schema::email_address,
 };
+use async_graphql::{Context, InputObject, Object, Result};
+use chrono::{Duration, NaiveDate, Utc};
+use diesel_async::{pooled_connection::deadpool::Pool, AsyncPgConnection, RunQueryDsl};
+use std::env;
+use uuid::Uuid;
+use validator::{Validate, ValidationError};
 
 #[derive(Default)]
 pub struct AddUser;
@@ -64,13 +64,6 @@ impl AddUser {
         let pool: &Pool<AsyncPgConnection> = ctx.data()?;
         let mut conn = pool.get().await?;
 
-        // let email_address_id: i32 = email_address::table
-        //     .filter(email_address::email.eq(&input.user_email))
-        //     .select(email_address::id)
-        //     .first(&mut conn)
-        //     .await
-        //     .map_err(|_| PhotoError::EmailNotFound)?;
-
         let new_email = NewEmailAddress {
             email: input.user_email.clone(),
             verification_code: email_verification_code,
@@ -86,7 +79,7 @@ impl AddUser {
                 log::error!("Failed to create email: {}", e);
                 e
             })?;
-        
+
         let brevo_api_key = env::var("BREVO_API_KEY").expect("BREVO_API_KEY must be set.");
         let brevo_email = env::var("BREVO_EMAIL").expect("BREVO_EMAIL must be set.");
 
@@ -120,6 +113,3 @@ impl AddUser {
         Ok(created_user)
     }
 }
-// email_verified: false,
-// email_verification_code,
-// email_verification_code_expiry: Utc::now().naive_utc() + chrono::Duration::hours(24),
