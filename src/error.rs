@@ -16,7 +16,9 @@ pub enum PhotoError {
     #[error("User Not Found")]
     UserNotFound,
     #[error("Invalid Credentials")]
-    InvalidCredentials
+    InvalidCredentials,
+    #[error("Email Not Found")]
+    EmailNotFound,
 }
 
 #[derive(Debug, Error)]

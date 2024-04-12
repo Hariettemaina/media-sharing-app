@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
     middle_name varchar,
     last_name varchar not null,
     username varchar not null unique,
-    email_address varchar not null,
+    user_email integer references email_address(id) not null,
     password_hash varchar not null,
     display_name varchar,
     date_of_birth date not null,
