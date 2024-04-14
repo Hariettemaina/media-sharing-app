@@ -13,7 +13,7 @@ pub struct Verify;
 #[derive(InputObject, Validate)]
 pub struct VerifyEmail {
     #[validate(length(min = 32))]
-    code: String,
+    pub code: String,
 }
 
 #[Object]

@@ -15,7 +15,7 @@ use validator::{Validate, ValidationError};
 #[derive(Default)]
 pub struct AddUser;
 
-#[derive(Validate, InputObject)]
+#[derive(Validate, InputObject, Default)]
 pub struct UserInput {
     #[validate(length(min = 4, max = 15))]
     pub first_name: String,
