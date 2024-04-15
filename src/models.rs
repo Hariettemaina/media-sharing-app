@@ -21,19 +21,6 @@ pub struct User {
     pub updated_at: NaiveDateTime,
 }
 
-// id -> Int4,
-// first_name -> Varchar,
-// middle_name -> Nullable<Varchar>,
-// last_name -> Varchar,
-// username -> Varchar,
-// user_email -> Int4,
-// password_hash -> Varchar,
-// display_name -> Nullable<Varchar>,
-// date_of_birth -> Date,
-// created_at -> Timestamp,
-// updated_at -> Timestamp,
-
-
 #[derive(Insertable)]
 #[diesel(table_name = users)]
 pub struct NewUser {
@@ -41,7 +28,7 @@ pub struct NewUser {
     pub middle_name: Option<String>,
     pub last_name: String,
     pub username: String,
-    pub user_email:i32,
+    pub user_email: i32,
     pub password_hash: String,
     pub display_name: Option<String>,
     pub date_of_birth: NaiveDate,
