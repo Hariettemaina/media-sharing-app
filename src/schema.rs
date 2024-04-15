@@ -11,6 +11,22 @@ diesel::table! {
 }
 
 diesel::table! {
+    images (id) {
+        id -> Int4,
+        name -> Varchar,
+        file_path -> Varchar,
+        description -> Nullable<Varchar>,
+        exif_data -> Nullable<Varchar>,
+        format -> Varchar,
+        size -> Int4,
+        width -> Int4,
+        height -> Int4,
+        created_at -> Timestamp,
+        deleted_at -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
     users (id) {
         id -> Int4,
         first_name -> Varchar,
@@ -30,5 +46,6 @@ diesel::joinable!(users -> email_address (user_email));
 
 diesel::allow_tables_to_appear_in_same_query!(
     email_address,
+    images,
     users,
 );

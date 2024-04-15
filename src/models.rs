@@ -1,4 +1,4 @@
-use crate::schema::{email_address, users};
+use crate::schema::{email_address, images, users};
 use async_graphql::{InputObject, SimpleObject};
 use chrono::{NaiveDate, NaiveDateTime};
 use diesel::{Insertable, Queryable, Selectable};
@@ -53,3 +53,47 @@ pub struct NewEmailAddress {
     pub verification_code: Uuid,
     pub verification_code_expires_at: NaiveDateTime,
 }
+
+#[derive(SimpleObject, Queryable, Selectable, Debug, Serialize)]
+#[diesel(table_name = images)]
+pub struct Images {
+    pub id: i32,
+    pub name: String,
+    pub file_path: String,
+    pub description:Option<String>,
+    pub exif_data:Option<String>,
+    pub format:String,
+    pub size: i32,
+    pub width: i32,
+    pub height: i32,
+    pub created_at: NaiveDateTime,
+    pub deleted_at: Option<NaiveDateTime>
+}
+#[derive(Insertable)]
+#[diesel(table_name = images)]
+pub struct  NewImage{
+    pub name: String,
+    pub file_path: String,
+    pub description:Option<String>,
+    pub exif_data:Option<String>,
+    pub format:String,
+    pub size: i32,
+    pub width: i32,
+    pub height: i32,
+    pub created_at: NaiveDateTime,
+    pub deleted_at: Option<NaiveDateTime>
+}
+
+// create table if not exists images(
+//     id serial primary key,
+//     name varchar not null,
+//     file_path varchar not null,
+//     description varchar,
+//     exif_data varchar,
+//     format varchar not null,
+//     size integer not null,
+//     width integer not null,
+//     height integer not null,
+//     created_at timestamp not null default now(),
+//     deleted_at timestamp
+// );
