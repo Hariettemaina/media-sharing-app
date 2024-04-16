@@ -60,40 +60,43 @@ pub struct Images {
     pub id: i32,
     pub name: String,
     pub file_path: String,
-    pub description:Option<String>,
-    pub exif_data:Option<String>,
-    pub format:String,
+    pub description: Option<String>,
+    pub exif_data: Option<String>,
+    pub format: String,
     pub size: i32,
     pub width: i32,
     pub height: i32,
     pub created_at: NaiveDateTime,
-    pub deleted_at: Option<NaiveDateTime>
+    pub deleted_at: Option<NaiveDateTime>,
 }
 #[derive(Insertable)]
 #[diesel(table_name = images)]
-pub struct  NewImage{
+pub struct NewImage {
     pub name: String,
     pub file_path: String,
-    pub description:Option<String>,
-    pub exif_data:Option<String>,
-    pub format:String,
+    pub description: Option<String>,
+    pub exif_data: Option<String>,
+    pub format: String,
     pub size: i32,
     pub width: i32,
     pub height: i32,
     pub created_at: NaiveDateTime,
-    pub deleted_at: Option<NaiveDateTime>
+    pub deleted_at: Option<NaiveDateTime>,
 }
 
-// create table if not exists images(
-//     id serial primary key,
-//     name varchar not null,
-//     file_path varchar not null,
-//     description varchar,
-//     exif_data varchar,
-//     format varchar not null,
-//     size integer not null,
-//     width integer not null,
-//     height integer not null,
-//     created_at timestamp not null default now(),
-//     deleted_at timestamp
-// );
+
+// diesel::table! {
+//     images (id) {
+//         id -> Int4,
+//         name -> Varchar,
+//         file_path -> Varchar,
+//         description -> Nullable<Varchar>,
+//         exif_data -> Nullable<Varchar>,
+//         format -> Varchar,
+//         size -> Int4,
+//         width -> Int4,
+//         height -> Int4,
+//         created_at -> Timestamp,
+//         deleted_at -> Nullable<Timestamp>,
+//     }
+// }
