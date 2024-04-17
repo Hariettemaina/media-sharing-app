@@ -1,9 +1,11 @@
+use actix_files as fs;
+use actix_session::{storage::CookieSessionStore, SessionMiddleware};
+
 use actix_web::{cookie::Key, guard, web, web::Data, App, HttpResponse, HttpServer, Result};
+use askama::Template;
 use async_graphql::{http::GraphiQLSource, EmptySubscription, Schema};
 use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse};
 use diesel_async::pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager};
-
-use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use photos::graphql_schema::{Mutation, Query};
 
 use photos::password::PassWordHasher;
@@ -15,6 +17,13 @@ async fn index(schema: web::Data<ApplicationSchema>, req: GraphQLRequest) -> Gra
     schema.execute(req.into_inner()).await.into()
 }
 
+#[derive(Template)]
+#[template(path = "base.html")]
+struct Index;
+
+// async fn handle_signup(query: web::) -> impl Responder {
+//     HttpResponse::Ok().body("Signup successful")
+// }
 async fn index_graphiql() -> Result<HttpResponse> {
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
@@ -39,6 +48,8 @@ async fn main() -> Result<(), InternalError> {
         .data(password_hasher)
         .finish();
 
+    log::info!("starting HTTP server at http://localhost:8080");
+
     println!("GraphiQL IDE: http://localhost:8000");
 
     HttpServer::new(move || {
@@ -49,8 +60,10 @@ async fn main() -> Result<(), InternalError> {
             ))
             .app_data(Data::new(schema.clone()))
             .service(web::resource("/").guard(guard::Post()).to(index))
-            .service(web::resource("/").guard(guard::Get()).to(index_graphiql))
+            .service(web::resource("/graphiql").guard(guard::Get()).to(index_graphiql))
+            .service(fs::Files::new("/", "./templates").index_file("base.html"))
     })
+    .bind(("127.0.0.1", 8080))?
     .bind("127.0.0.1:8000")?
     .run()
     .await?;

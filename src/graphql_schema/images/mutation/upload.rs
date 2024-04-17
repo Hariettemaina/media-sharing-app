@@ -9,31 +9,36 @@ use std::io::{Read, Write};
 use std::path::Path;
 use uuid::Uuid;
 
-use crate::schema::images;
 use crate::PhotoError;
 
 #[derive(Default)]
 pub struct UploadMedia;
 
 #[derive(InputObject)]
-pub struct UserInput {
+pub struct UploadUserInput {
     pub image: Upload,
     pub user_id: i32,
 }
 
 #[Object]
 impl UploadMedia {
-    pub async fn upload(&self, ctx: &Context<'_>, input: UserInput) -> Result<bool> {
+    pub async fn upload(&self, ctx: &Context<'_>, input: UploadUserInput) -> Result<bool> {
+        use crate::schema::images;
+
         let time_now = Utc::now().naive_utc();
 
         let mut image = Vec::new();
         let mut upload_value = input.image.value(ctx).unwrap();
+
         let mut content = upload_value.content;
         if let Err(e) = content.read_to_end(&mut image) {
             log::error!("Failed to read image content: {}", e);
-            return Err(async_graphql::Error::new(format!("Failed to read image content: {}", e)));
+            return Err(async_graphql::Error::new(format!(
+                "Failed to read image content: {}",
+                e
+            )));
         }
-
+        
         // access the filename from the UploadValue    (each uploaded file has a unique name, even if two files have the same original name.uuid)
         let filename = format!(
             "{}.{}",
@@ -41,14 +46,17 @@ impl UploadMedia {
             Path::new(&mut upload_value.filename)
                 .extension()
                 .and_then(std::ffi::OsStr::to_str)
-                .unwrap_or("bin")
+                .unwrap_or("bin") //default value if path does not have an extension
         );
-        let filepath = format!("./uploads/{}", filename);
+        let filepath = format!("./uploads/{}-{}",input.user_id, filename);
 
         // Save the file to the system
         if let Err(e) = File::create(filepath.clone()).and_then(|mut file| file.write_all(&image)) {
             log::error!("Failed to save file: {}", e);
-            return Err(async_graphql::Error::new(format!("Failed to save file: {}", e)));
+            return Err(async_graphql::Error::new(format!(
+                "Failed to save file: {}",
+                e
+            )));
         }
 
         // Open the image to get its dimensions and format
@@ -56,13 +64,16 @@ impl UploadMedia {
             Ok(img) => img,
             Err(e) => {
                 log::error!("Failed to open image: {}", e);
-                return Err(async_graphql::Error::new(format!("Failed to open image: {}", e)));
+                return Err(async_graphql::Error::new(format!(
+                    "Failed to open image: {}",
+                    e
+                )));
             }
         };
         let (width, height) = img.dimensions();
         let image_format = image::guess_format(&image).unwrap(); //not supported
 
-        // Convert the format to a MIME type string
+        // Convert the format to a type string
         let media = match image_format {
             image::ImageFormat::Png => "image/png",
             image::ImageFormat::Jpeg => "image/jpeg",
@@ -80,7 +91,7 @@ impl UploadMedia {
             image::ImageFormat::Avif => "image/avif",
             image::ImageFormat::Qoi => "image/qoi",
 
-            _ => "application/octet-stream", // Default to a generic binary format
+            _ => "None",
         };
 
         let pool: &Pool<AsyncPgConnection> = ctx.data()?;
@@ -103,14 +114,13 @@ impl UploadMedia {
             .execute(&mut conn)
             .await
             .map_err(|e| {
-                log::error!("Failed to insert image into database:{}",e);
+                log::error!("Failed to insert image into database:{}", e);
                 PhotoError::DatabaseError
             })?;
 
         Ok(true)
     }
 }
-
 
 //upload_value
 // pub filename: String,

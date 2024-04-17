@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Registration or Sign Up form</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="index.js" defer></script>
+  </head>
+  <body>
+    <div class="wrapper">
+      <h2>Registration</h2>
+      <form id="registrationForm" method="post">
+        <div class="input-box">
+          <input type="text" id="firstName" placeholder="First Name" required />
+        </div>
+        <div class="input-box">
+          <input
+            type="text"
+            id="middleName"
+            placeholder="Middle Name"
+            required
+          />
+        </div>
+        <div class="input-box">
+          <input type="text" id="lastName" placeholder="Last name" required />
+        </div>
+        <div class="input-box">
+          <input type="text" id="userName" placeholder="User name" required />
+        </div>
+        <div class="input-box">
+          <input
+            type="email"
+            id="userEmail"
+            placeholder="User email"
+            required
+          />
+        </div>
+        <div class="input-box">
+          <input
+            type="text"
+            id="displayName"
+            placeholder="Display Name"
+            required
+          />
+        </div>
+        <div class="input-box">
+          <input type="date" id="dob" placeholder="Date of birth" required />
+        </div>
+        <div class="input-box">
+          <input
+            type="password"
+            id="password"
+            placeholder="Create password"
+            required
+          />
+        </div>
+        <div class="input-box">
+          <input
+            type="password"
+            id="confirmPassword"
+            placeholder="Confirm password"
+            required
+          />
+        </div>
+        <div class="input-box button">
+          <input type="submit" value="Register Now" />
+        </div>
+        <div class="text">
+          <h3>Already have an account? <a href="login.html">Login now</a></h3>
+        </div>
+      </form>
+    </div>
+  </body>
+</html>
