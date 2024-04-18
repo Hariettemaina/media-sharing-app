@@ -1,15 +1,21 @@
 document.addEventListener('DOMContentLoaded', function () {
     let registrationForm = document.getElementById('registrationForm');
-
-    // Email validation function
-    function validateEmail(email) {
-        const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-        return re.test(String(email).toLowerCase());
-    }
-
-    // Registration Form Submission
     registrationForm.addEventListener('submit', function (event) {
+
+        // Email validation function
+        function validateEmail(email) {
+            const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+            return re.test(String(email).toLowerCase());
+        }
+
+        // function isEmailVerified() {
+        //     return true; 
+        // }
+
+
+        // Registration Form Submission
         event.preventDefault();
+
 
         let firstName = document.getElementById('firstName').value;
         let middleName = document.getElementById('middleName').value;
@@ -31,8 +37,6 @@ document.addEventListener('DOMContentLoaded', function () {
             alert('Passwords do not match.');
             return;
         }
-
-
         let formData = new FormData();
         formData.append('firstName', firstName);
         formData.append('middleName', middleName);
@@ -44,10 +48,41 @@ document.addEventListener('DOMContentLoaded', function () {
         formData.append('password', password);
         formData.append('confirmPassword', confirmPassword);
 
+
+
+
+
+
+        var mutation = `
+        mutation SignUp($input: UserInput!) {
+            signup(input: $input) {
+                users {
+                    firstName
+                    middleName
+                    lastName
+                    userName
+                    userEmail
+                    paswordHash
+                    displayName
+                    dateOfBirth
+                }
+            }
+        }
+        `;
+
+
+
         // Submit form 
-        fetch('/signup', {
+        fetch('http://localhost:8000', {
             method: 'POST',
-            body: formData
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                query: mutation,
+                variables: formData,
+            })
         })
             .then(response => {
                 if (!response.ok) {

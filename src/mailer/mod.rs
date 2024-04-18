@@ -16,7 +16,7 @@ impl BrevoApi {
         recipient_email_address: String,
         verification_code: Uuid,
     ) -> Result<(), Error> {
-        let url = "https://api.brevo.com/v3/mail/send";
+        let url = "https://api.sendgrid.com/v3/mail/send";
 
         let mut headers = HeaderMap::new();
         headers.insert(
@@ -29,10 +29,10 @@ impl BrevoApi {
             r#"
         Click the link below to verify your email:
 
-        http://yourdomain.com/verify?code={}
+        
+        http://85.10.132.109:3000/verify?code={verification_code}
         
         "#,
-            verification_code
         );
 
         let response = client
