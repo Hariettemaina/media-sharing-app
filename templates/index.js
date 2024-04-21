@@ -1,22 +1,9 @@
 document.addEventListener('DOMContentLoaded', function () {
     let registrationForm = document.getElementById('registrationForm');
     registrationForm.addEventListener('submit', function (event) {
+        event.preventDefault(); // Prevent the default form submission
 
-        // Email validation function
-        function validateEmail(email) {
-            const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-            return re.test(String(email).toLowerCase());
-        }
-
-        // function isEmailVerified() {
-        //     return true; 
-        // }
-
-
-        // Registration Form Submission
-        event.preventDefault();
-
-
+        // Extract form data
         let firstName = document.getElementById('firstName').value;
         let middleName = document.getElementById('middleName').value;
         let lastName = document.getElementById('lastName').value;
@@ -27,52 +14,45 @@ document.addEventListener('DOMContentLoaded', function () {
         let password = document.getElementById('password').value;
         let confirmPassword = document.getElementById('confirmPassword').value;
 
-        // Validate email
-        if (!validateEmail(userEmail)) {
-            alert('Please enter a valid email address.');
-            return;
-        }
-        // Validation
+        // Validate password match
         if (password !== confirmPassword) {
             alert('Passwords do not match.');
             return;
         }
-        let formData = new FormData();
-        formData.append('firstName', firstName);
-        formData.append('middleName', middleName);
-        formData.append('lastName', lastName);
-        formData.append('userName', userName);
-        formData.append('userEmail', userEmail);
-        formData.append('displayName', displayName);
-        formData.append('dob', dob);
-        formData.append('password', password);
-        formData.append('confirmPassword', confirmPassword);
 
-
-
-
-
-
-        var mutation = `
+        // Prepare the GraphQL mutation
+        let mutation = `
         mutation SignUp($input: UserInput!) {
-            signup(input: $input) {
-                users {
-                    firstName
-                    middleName
-                    lastName
-                    userName
-                    userEmail
-                    paswordHash
-                    displayName
-                    dateOfBirth
-                }
+            users{
+               signup(input: $input){
+                firstName
+               middleName
+               lastName
+               username
+               userEmail
+               passwordHash
+               displayName
+               dateOfBirth
+             }
+             }
+             }
+      `;
+
+        // Prepare the variables for the mutation
+        let variables = {
+            input: {
+                firstName,
+                middleName,
+                lastName,
+                username: userName,
+                userEmail,
+                displayName,
+                passwordHash: password,
+                dateOfBirth: dob,
             }
-        }
-        `;
+        };
 
-
-
-        // Submit form 
+        // Send the request to the GraphQL server
         fetch('http://localhost:8000', {
             method: 'POST',
             headers: {
@@ -81,23 +61,24 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             body: JSON.stringify({
                 query: mutation,
-                variables: formData,
-            })
+                variables,
+            }),
         })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                console.log('Signup successful:', data);
-
-                window.location.href = 'verify_email.html';
+                if (data.errors) {
+                    console.error('GraphQL Error:', data.errors);
+                    alert('Signup failed. Please try again.');
+                } else {
+                    console.log('Signup successful:', data.data.signup.users);
+                    alert('Signup successful! Please check your email to verify your account.');
+                    // Redirect to verify_email.html or handle as needed
+                    window.location.href = 'verify_email.html';
+                }
             })
             .catch(error => {
-                console.error('There was a problem with the fetch operation:', error);
-
+                console.error('Network error:', error);
+                alert('Network error. Please try again.');
             });
     });
 });

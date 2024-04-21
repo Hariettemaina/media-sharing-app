@@ -5,7 +5,7 @@ use actix_web::{cookie::Key, guard, web, web::Data, App, HttpResponse, HttpServe
 use async_graphql::{http::GraphiQLSource, EmptySubscription, Schema};
 use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse};
 use diesel_async::pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager};
-use handlebars::{DirectorySourceOptions, Handlebars};
+//use handlebars::{DirectorySourceOptions, Handlebars};
 use photos::graphql_schema::{Mutation, Query};
 
 use photos::password::PassWordHasher;
@@ -39,18 +39,18 @@ async fn index_graphiql() -> Result<HttpResponse> {
 
 #[actix_web::main]
 async fn main() -> Result<(), InternalError> {
-    let mut handlebars = Handlebars::new();
-    handlebars
-        .register_templates_directory(
-            "./templates",
-            DirectorySourceOptions {
-                tpl_extension: ".html".to_owned(),
-                hidden: false,
-                temporary: false,
-            },
-        )
-        .unwrap();
-    let handlebars_ref = web::Data::new(handlebars);
+    // let mut handlebars = Handlebars::new();
+    // handlebars
+    //     .register_templates_directory(
+    //         "./templates",
+    //         DirectorySourceOptions {
+    //             tpl_extension: ".html".to_owned(),
+    //             hidden: false,
+    //             temporary: false,
+    //         },
+    //     )
+    //     .unwrap();
+    // let handlebars_ref = web::Data::new(handlebars);
 
     dotenvy::dotenv().ok();
 
@@ -87,10 +87,10 @@ async fn main() -> Result<(), InternalError> {
             ))
             .wrap(cors)
             .app_data(Data::new(schema.clone()))
-            .app_data(handlebars_ref.clone())
+            //.app_data(handlebars_ref.clone())
             .service(web::resource("/").guard(guard::Post()).to(index))
             .service(
-                web::resource("/graphiql")
+                web::resource("/")
                     .guard(guard::Get())
                     .to(index_graphiql),
             )

@@ -30,7 +30,7 @@ impl BrevoApi {
         Click the link below to verify your email:
 
         
-        http://85.10.132.109:3000/verify?code={verification_code}
+        http://localhost:8080/verify?code={verification_code}
         
         "#,
         );
