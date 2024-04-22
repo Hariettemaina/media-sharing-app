@@ -2,7 +2,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let registrationForm = document.getElementById('registrationForm');
     registrationForm.addEventListener('submit', function (event) {
         event.preventDefault(); // Prevent the default form submission
-
+        const urlParams = new URLSearchParams(window.location.search);
+        const verificationCode = urlParams.get('code');
         // Extract form data
         let firstName = document.getElementById('firstName').value;
         let middleName = document.getElementById('middleName').value;
@@ -24,21 +25,21 @@ document.addEventListener('DOMContentLoaded', function () {
         let mutation = `
         mutation SignUp($input: UserInput!) {
             users{
-               signup(input: $input){
+                signup(input: $input){
                 firstName
-               middleName
-               lastName
-               username
-               userEmail
-               passwordHash
-               displayName
-               dateOfBirth
-             }
-             }
-             }
-      `;
+                middleName
+                lastName
+                username
+                userEmail
+                passwordHash
+                displayName
+                dateOfBirth
+            }
+            }
+            }
+    `;
 
-        // Prepare the variables for the mutation
+        
         let variables = {
             input: {
                 firstName,
@@ -70,10 +71,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     console.error('GraphQL Error:', data.errors);
                     alert('Signup failed. Please try again.');
                 } else {
-                    console.log('Signup successful:', data.data.signup.users);
+                    console.log('Signup successful:', data.data.users.signup);
                     alert('Signup successful! Please check your email to verify your account.');
-                    // Redirect to verify_email.html or handle as needed
-                    window.location.href = 'verify_email.html';
+                }
+                if (verificationCode) {
+                    window.location.href = 'verify_email.html'
                 }
             })
             .catch(error => {

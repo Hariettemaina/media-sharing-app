@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Sharing Dashboard</title>
+    
+    <link rel="stylesheet" href="dash.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="#">Home</a></li>
+                <li><a href="#">Upload</a></li>
+                <li><a href="#">Profile</a></li>
+                <li><a href="#">Logout</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section id="upload-section">
+            <h2>Upload Media</h2>
+            <form action="/upload" method="post" enctype="multipart/form-data">
+                <input type="file" name="media" accept="image/*,video/*" required>
+                <button type="submit">Upload</button>
+            </form>
+        </section>
+
+        <section id="media-section">
+            <h2>Your Media</h2>
+            <div class="media-grid">
+                <!-- Media items will be dynamically added here -->
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Media Sharing App</p>
+    </footer>
+
+    <!-- Add your JavaScript link here -->
+    <script src="scripts.js"></script>
+</body>
+</html>

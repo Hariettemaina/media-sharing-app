@@ -20,7 +20,7 @@ pub struct VerifyEmail {
 impl Verify {
     pub async fn verify_email(&self, ctx: &Context<'_>, input: VerifyEmail) -> Result<bool> {
         input.validate()?;
-
+        dotenvy::dotenv().ok();
         let pool: &Pool<AsyncPgConnection> = ctx.data()?;
         let mut conn = pool.get().await?;
 

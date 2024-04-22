@@ -14,16 +14,16 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-
         const mutation = `
-            mutation VerifyEmail($input: VerifyEmail!) {
-                verify_email(input: $input) {
-                    code
-                }
-            }
+        mutation VerifyEamail($input: VerifyEmail!){
+            users{
+            verifyEmail(input: $input) 
+        } 
+        }
         `;
+        
 
-
+        
         const variables = {
             input: {
                 code: verificationCode,
@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (data.data.verify_email.success) {
                         verificationStatus.textContent = 'Email verified successfully!';
                         // direct the user to a login page 
-                        // window.location.href = 'login.html';
+                        window.location.href = 'login.html';
                     } else {
                         verificationStatus.textContent = 'Verification failed. Please check your email for the verification link.';
                     }

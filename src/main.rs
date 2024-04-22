@@ -1,10 +1,10 @@
 use actix_cors::Cors;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
-use actix_web::http;
-use actix_web::{cookie::Key, guard, web, web::Data, App, HttpResponse, HttpServer, Result};
+use actix_web::{cookie::Key, guard, http, web, web::Data, App, HttpResponse, HttpServer, Result};
 use async_graphql::{http::GraphiQLSource, EmptySubscription, Schema};
 use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse};
 use diesel_async::pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager};
+
 //use handlebars::{DirectorySourceOptions, Handlebars};
 use photos::graphql_schema::{Mutation, Query};
 
@@ -17,18 +17,50 @@ async fn index(schema: web::Data<ApplicationSchema>, req: GraphQLRequest) -> Gra
     schema.execute(req.into_inner()).await.into()
 }
 
-// #[post("/signup")]
-// async fn index_signup(hb: web::Data<Handlebars<'_>>) -> HttpResponse {
-//     let body = hb.render("base", &()).unwrap();
-//     HttpResponse::Ok().body(body)
+// async fn login_handler(schema: web::Data<ApplicationSchema>, req: web::Json<LoginInput>) -> impl Responder {
+//     let mutation = r#"
+//         mutation Login($input: LoginInput!) {
+//             login(input: $input) {
+//                 message
+//             }
+//         }
+//     "#;
+
+//     let variables = json!({
+//         "input": {
+//             "user_email": req.user_email,
+//             "password": req.password,
+//         }
+//     });
+
+//     //let request = GraphQLRequest::new(mutation.to_string(), variables);
+//     let response: GraphQLResponse = schema.execute(mutation).await.into();
+
+//     match response.data {
+//         Some(data) => {
+//             if let Some(message) = data.get("login").and_then(|login| login.get("message")) {
+//                 HttpResponse::Ok().body(message.to_string())
+//             } else {
+//                 HttpResponse::InternalServerError().body("Failed to authenticate")
+//             }
+//         }
+//         None => HttpResponse::InternalServerError().body("Failed to authenticate"),
+//     }
 // }
-// async fn index_verify(hb: web::Data<Handlebars<'_>>) -> HttpResponse {
-//     let body = hb.render("verify", &()).unwrap();
-//     HttpResponse::Ok().body(body)
+
+// async fn index_signup() -> Result<NamedFile> {
+//     let path: PathBuf = "./templates/base.html".parse().unwrap();
+//     Ok(NamedFile::open(path)?)
 // }
-// async fn index_login(hb: web::Data<Handlebars<'_>>) -> HttpResponse {
-//     let body = hb.render("login", &()).unwrap();
-//     HttpResponse::Ok().body(body)
+
+// async fn index_verify() -> Result<NamedFile> {
+//     let path: PathBuf = "./templates/verify_email.html".parse().unwrap();
+//     Ok(NamedFile::open(path)?)
+// }
+
+// async fn index_login() -> Result<NamedFile> {
+//     let path: PathBuf = "./templates/login.html".parse().unwrap();
+//     Ok(NamedFile::open(path)?)
 // }
 
 async fn index_graphiql() -> Result<HttpResponse> {
@@ -90,12 +122,13 @@ async fn main() -> Result<(), InternalError> {
             //.app_data(handlebars_ref.clone())
             .service(web::resource("/").guard(guard::Post()).to(index))
             .service(
-                web::resource("/")
+                web::resource("/graphiql")
                     .guard(guard::Get())
                     .to(index_graphiql),
             )
             .service(actix_files::Files::new("/", "./templates").show_files_listing())
-        // .route("/signup", web::post().to(index_signup))
+        //.service(web::resource("/login").route(web::post(). to(login_handler)))
+        //.route("/signup", web::get().to(index_signup))
         // .route("/verify", web::get().to(index_verify))
         // .route("/login", web::get().to(index_login))
     })
