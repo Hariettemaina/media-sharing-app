@@ -47,16 +47,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.errors) {
                     console.error('GraphQL Error:', data.errors);
                     verificationStatus.textContent = 'Verification failed. Please try again.';
+                } else if (data.data && data.data.users && data.data.users.verifyEmail) {
+                    // direct the user to a login page 
+                    window.location.href = 'login.html';
                 } else {
-                    if (data.data.verify_email.success) {
-                        verificationStatus.textContent = 'Email verified successfully!';
-                        // direct the user to a login page 
-                        window.location.href = 'login.html';
-                    } else {
-                        verificationStatus.textContent = 'Verification failed. Please check your email for the verification link.';
-                    }
+                    verificationStatus.textContent = 'Verification failed. Please check your email for the verification link.';
                 }
             })
+            
             .catch(error => {
                 console.error('Network error:', error);
                 verificationStatus.textContent = 'Network error. Please try again.';

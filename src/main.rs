@@ -8,6 +8,7 @@ use diesel_async::pooled_connection::{deadpool::Pool, AsyncDieselConnectionManag
 //use handlebars::{DirectorySourceOptions, Handlebars};
 use photos::graphql_schema::{Mutation, Query};
 
+use photos::mailer::BrevoApi;
 use photos::password::PassWordHasher;
 use photos::InternalError;
 
@@ -87,6 +88,10 @@ async fn main() -> Result<(), InternalError> {
     dotenvy::dotenv().ok();
 
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+    let api_key = dotenvy::var("BREVO_API_KEY").expect("BREVO_API_KEY must be set.");
+    let email = dotenvy::var("BREVO_EMAIL").expect("BREVO_EMAIL must be set.");
+
+    let brevo_api = BrevoApi::new(api_key, email);
 
     let database_url = dotenvy::var("DATABASE_URL").unwrap();
 
@@ -97,6 +102,7 @@ async fn main() -> Result<(), InternalError> {
     let password_hasher = PassWordHasher::new();
     let schema = Schema::build(Query::default(), Mutation::default(), EmptySubscription)
         .data(pool)
+        .data(brevo_api)
         .data(password_hasher)
         .finish();
 

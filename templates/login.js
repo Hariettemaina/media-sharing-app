@@ -10,8 +10,8 @@ document.addEventListener('DOMContentLoaded', function () {
         
         const mutation = `
             mutation Login($input: LoginInput!) {
-                login(input: $input) {
-                    message
+                users{
+                    login(input: $input)
                 }
             }
         `;
@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function () {
         
         const variables = {
             input: {
-                user_email: userEmail,
+                userEmail: userEmail,
                 password: password,
             }
         };
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.error('GraphQL Error:', data.errors);
                 alert('Login failed. Please try again.');
             } else {
-                console.log('Login successful:', data.data.message.login);
+                //console.log('Login successful:', data.data.message.login);
                 alert('Login successful!');
                 //direct to another page after successful login
                 window.location.href = 'dashboard.html';
