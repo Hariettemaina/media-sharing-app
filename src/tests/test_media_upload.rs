@@ -1,104 +1,59 @@
 #[cfg(test)]
 mod tests {
-    use crate::graphql_schema::images::mutation::upload::{UploadMedia, UploadUserInput};
-
-    use async_graphql::{Context, EmptySubscription, Schema, Upload, UploadValue};
-    use diesel_async::pooled_connection::deadpool::Pool;
-    use diesel_async::pooled_connection::AsyncDieselConnectionManager;
-    use std::env;
+    use reqwest::multipart;
     use std::fs::File;
     use std::io::Write;
-
+    use std::path::Path;
     use tokio::fs;
 
-    struct MediaUpload {
-        filename: String,
-        content_type: Option<String>,
-        content: Vec<u8>,
-    }
-
-    impl MediaUpload {
-        fn new(filename: String, content_type: Option<String>, content: Vec<u8>) -> Self {
-            Self {
-                filename,
-                content_type,
-                content,
-            }
-        }
-    }
-
-
-    
-    impl MediaUpload {
-        async fn value(
-            &self,
-            _ctx: &Context<'_>,
-        ) -> Result<UploadValue, async_graphql::Error> {
-            let mut temp_file =
-                tempfile::NamedTempFile::new().expect("Failed to create temporary file");
-            temp_file
-                .write_all(&self.content)
-                .expect("Failed to write to temporary file");
-
-                let file = File::open(temp_file.path()).expect("Failed to open temporary file");
-
-            Ok(UploadValue {
-                filename: self.filename.clone(),
-                content_type: self.content_type.clone(),
-                content: file
-            })
-        }
-    }
-    
     #[tokio::test]
-    async fn test_upload_media() {
-        dotenvy::dotenv().ok();
-
-        let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-        let config =
-            AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(database_url);
-        let pool = Pool::builder(config).build().unwrap();
-
-        let schema = Schema::build(UploadMedia, UploadMedia, EmptySubscription)
-            .data(pool)
-            .finish();
-
+    async fn test_upload_file() {
         // Create a temporary file to simulate an uploaded file
         let temp_file_path = "./uploads/test_upload.jpg";
+        // create a dir
+        let dir = Path::new(&temp_file_path)
+            .parent()
+            .expect("Failed to get parent directory");
+        fs::create_dir_all(&dir).await.expect("Failed to create directory");
+
         let mut file = File::create(temp_file_path).expect("Failed to create temporary file");
         file.write_all(b"test image content")
             .expect("Failed to write to temporary file");
 
-        let mock_upload = Upload::new(
-            "test_upload.jpg".to_string(),
-            Some("image/jpeg".to_string()),
-            b"test image content".to_vec(),
-        );
-
-        let input = UploadUserInput {
-            image: mock_upload,
-            user_id: 1,
-        };
-
-        let result = schema
-            .execute(
-                r#"
-            mutation UploadMedia($input: UploadUserInput!) {
-                upload(input: $input)
-            }
-        "#,
-            )
-            .await;
-
-        assert!(result.is_ok());
-
-        // Cleanup: Remove the temporary file
-        fs::remove_file(temp_file_path)
+        // Read the file content into a Vec<u8>
+        let file_content = fs::read(temp_file_path)
             .await
-            .expect("Failed to remove temporary file");
+            .expect("Failed to read file content");
+
+        // Create a multipart request with the temporary file
+        let client = reqwest::Client::new();
+        let form = multipart::Form::new()
+        .text("operations", r#"{ "query": "mutation ($file: Upload!) { upload(file: $file) }", "variables": { "file": null } }"#)
+        .text("map", r#"{ "0": ["variables.file"] }"#)
+        .part("0", multipart::Part::bytes(file_content)
+            .file_name("test_upload.jpg") // Set the file name
+            .mime_str("image/jpeg").unwrap()); // Set the MIME type
+
+        // Send the request to  GraphQL server
+        let response = client
+            .post("http://localhost:8000")
+            .multipart(form)
+            .send()
+            .await
+            .expect("Failed to send request");
+
+        
+        assert!(response.status().is_success());
+
+        // Cleanup
+        std::fs::remove_file(temp_file_path).expect("Failed to remove temporary file");
     }
 }
-// async fn as_upload(&self, ctx: &Context<'_>) -> Result<Upload, async_graphql::Error> {
-//     let upload_value = self.as_upload_value(ctx).await?;
-//     Ok(Upload(upload_value))
-// }
+// create a temporary file: It  then creates a temporary file with some content to simulate an uploaded file.
+// create a multipart request: It constructs a multipart request that includes the temporary file. 
+//the request is structured according to the GraphQL multipart request specification, 
+//which requires specifying the GraphQL query and variables in a JSON string, along with a map that associates the file part with the variable in the query.
+// Sends the Request: It sends the request to the GraphQL server using reqwest.
+// asserts the result: It checks that the response status indicates success, indicating that the file upload was processed successfully.
+// cleans Up: It removes the temporary file after the test.
+//we use reqwest, as it  supports multipart requests.
