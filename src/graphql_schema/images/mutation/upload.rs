@@ -30,7 +30,7 @@ impl UploadMedia {
         let mut image = Vec::new();
         let mut upload_value = input.image.value(ctx).unwrap();
 
-        let mut content = upload_value.content;
+        let mut content = upload_value.content; //file data
         if let Err(e) = content.read_to_end(&mut image) {
             log::error!("Failed to read image content: {}", e);
             return Err(async_graphql::Error::new(format!(

@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let userEmail = document.getElementById('userEmail').value;
         let displayName = document.getElementById('displayName').value;
         let dob = document.getElementById('dob').value;
+        console.log(dob)
         let password = document.getElementById('password').value;
         let confirmPassword = document.getElementById('confirmPassword').value;
 
