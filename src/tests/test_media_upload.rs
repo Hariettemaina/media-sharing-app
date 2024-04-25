@@ -1,20 +1,32 @@
 #[cfg(test)]
 mod tests {
+    use async_graphql::{EmptySubscription, Schema};
+    use diesel_async::pooled_connection::deadpool::Pool;
+    use diesel_async::pooled_connection::AsyncDieselConnectionManager;
     use reqwest::multipart;
+    use std::env;
     use std::fs::File;
     use std::io::Write;
     use std::path::Path;
     use tokio::fs;
 
+    use crate::graphql_schema::images::mutation::upload::UploadMedia;
+    //use crate::schema;
+
     #[tokio::test]
     async fn test_upload_file() {
+
+        
+
         // Create a temporary file to simulate an uploaded file
         let temp_file_path = "./uploads/test_upload.jpg";
         // create a dir
         let dir = Path::new(&temp_file_path)
             .parent()
             .expect("Failed to get parent directory");
-        fs::create_dir_all(&dir).await.expect("Failed to create directory");
+        fs::create_dir_all(&dir)
+            .await
+            .expect("Failed to create directory");
 
         let mut file = File::create(temp_file_path).expect("Failed to create temporary file");
         file.write_all(b"test image content")
@@ -42,16 +54,17 @@ mod tests {
             .await
             .expect("Failed to send request");
 
-        
         assert!(response.status().is_success());
 
+        // let result = schema.execute().await;
+
         // Cleanup
-        std::fs::remove_file(temp_file_path).expect("Failed to remove temporary file");
+        //std::fs::remove_file(temp_file_path).expect("Failed to remove temporary file");
     }
 }
 // create a temporary file: It  then creates a temporary file with some content to simulate an uploaded file.
-// create a multipart request: It constructs a multipart request that includes the temporary file. 
-//the request is structured according to the GraphQL multipart request specification, 
+// create a multipart request: It constructs a multipart request that includes the temporary file.
+//the request is structured according to the GraphQL multipart request specification,
 //which requires specifying the GraphQL query and variables in a JSON string, along with a map that associates the file part with the variable in the query.
 // Sends the Request: It sends the request to the GraphQL server using reqwest.
 // asserts the result: It checks that the response status indicates success, indicating that the file upload was processed successfully.

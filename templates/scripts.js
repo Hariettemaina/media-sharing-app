@@ -8,7 +8,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const formData = new FormData();
         formData.append('operations', JSON.stringify({
-            query: `mutation ($file: Upload!) { upload(file: $file) }`,
+            query: `mutation UploadMedia($input: UploadUserInput!) {
+                images{
+                    upload(input: $input)
+                }   
+            }`,
             variables: { file: null }
         }));
         formData.append('map', JSON.stringify({
@@ -18,19 +22,15 @@ document.addEventListener('DOMContentLoaded', function () {
         fetch('http://localhost:8000', {
             method: 'POST',
             body: formData,
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
         })
             .then(response => response.json())
             .then(data => {
                 console.log('Success:', data);
-                const imageUrl = data.data.upload; // Adjust this line based on your server's response structure
+                const imageUrl = data.data.upload; 
                 uploadedImage.src = imageUrl; 
             })
             .catch(error => {
                 console.error('Error:', error);
-                // Handle the error appropriately
             });
     });
 });
