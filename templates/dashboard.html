@@ -22,8 +22,8 @@
     <main>
         <section id="upload-section">
             <h2>Upload Media</h2>
-            <form action="/upload" method="post" enctype="multipart/form-data">
-                <input type="file" name="media" accept="image/*,video/*" required>
+            <form id="upload-form" action="/upload" method="post" enctype="multipart/form-data">
+                <input id="file-input" type="file" name="media" accept="image/*,video/*" required>
                 <button type="submit">Upload</button>
             </form>
         </section>

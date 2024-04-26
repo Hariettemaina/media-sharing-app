@@ -59,7 +59,7 @@ mod tests {
         // let result = schema.execute().await;
 
         // Cleanup
-        //std::fs::remove_file(temp_file_path).expect("Failed to remove temporary file");
+        std::fs::remove_file(temp_file_path).expect("Failed to remove temporary file");
     }
 }
 // create a temporary file: It  then creates a temporary file with some content to simulate an uploaded file.
