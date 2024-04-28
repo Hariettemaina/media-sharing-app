@@ -4,7 +4,7 @@ use diesel::ExpressionMethods;
 use diesel_async::AsyncPgConnection;
 use diesel_async::{pooled_connection::deadpool::Pool, RunQueryDsl};
 use image::GenericImageView;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::Path;
 use uuid::Uuid;
@@ -38,7 +38,7 @@ impl UploadMedia {
                 e
             )));
         }
-        
+
         // access the filename from the UploadValue    (each uploaded file has a unique name, even if two files have the same original name.uuid)
         let filename = format!(
             "{}.{}",
@@ -48,10 +48,23 @@ impl UploadMedia {
                 .and_then(std::ffi::OsStr::to_str)
                 .unwrap_or("bin") //default value if path does not have an extension
         );
-        let filepath = format!("./uploads/{}-{}",input.user_id, filename);
+        let uploads_dir = "./uploads";
+        let user_uploads_dir = format!("{}/{}", uploads_dir, input.user_id);
+
+        // Check if the uploads directory exists, if not, create it
+        if !Path::new(uploads_dir).exists() {
+            fs::create_dir_all(uploads_dir).expect("Failed to create uploads directory");
+        }
+
+        // Check if the user-specific uploads directory exists, if not, create it
+        if !Path::new(&user_uploads_dir).exists() {
+            fs::create_dir_all(&user_uploads_dir)
+                .expect("Failed to create user-specific uploads directory");
+        }
 
         // Save the file to the system
-        if let Err(e) = File::create(filepath.clone()).and_then(|mut file| file.write_all(&image)) {
+        let filepath = format!("{}/{}", user_uploads_dir, filename);
+        if let Err(e) = File::create(&filepath).and_then(|mut file| file.write_all(&image)) {
             log::error!("Failed to save file: {}", e);
             return Err(async_graphql::Error::new(format!(
                 "Failed to save file: {}",

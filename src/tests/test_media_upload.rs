@@ -1,23 +1,13 @@
 #[cfg(test)]
 mod tests {
-    use async_graphql::{EmptySubscription, Schema};
-    use diesel_async::pooled_connection::deadpool::Pool;
-    use diesel_async::pooled_connection::AsyncDieselConnectionManager;
     use reqwest::multipart;
-    use std::env;
     use std::fs::File;
     use std::io::Write;
     use std::path::Path;
     use tokio::fs;
 
-    use crate::graphql_schema::images::mutation::upload::UploadMedia;
-    //use crate::schema;
-
     #[tokio::test]
     async fn test_upload_file() {
-
-        
-
         // Create a temporary file to simulate an uploaded file
         let temp_file_path = "./uploads/test_upload.jpg";
         // create a dir
