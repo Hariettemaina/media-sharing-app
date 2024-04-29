@@ -132,7 +132,7 @@ impl UploadMedia {
             })?;
 
         Ok(true)
-    }
+    } 
 }
 
 //upload_value

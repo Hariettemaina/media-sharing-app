@@ -1,4 +1,4 @@
-use crate::schema::{email_address, images, users};
+use crate::schema::{email_address, images, users, videos};
 use async_graphql::{InputObject, SimpleObject};
 use chrono::{NaiveDate, NaiveDateTime};
 use diesel::{Insertable, Queryable, Selectable};
@@ -84,19 +84,46 @@ pub struct NewImage {
     pub deleted_at: Option<NaiveDateTime>,
 }
 
+#[derive(SimpleObject, Queryable, Selectable, Debug, Serialize)]
+#[diesel(table_name = videos)]
+pub struct Videos {
+    pub id: i32,
+    pub title: String,
+    pub codec_name: Option<String>,
+    pub duration: Option<String>,
+    pub file_path: String,
+    pub width: Option<i32>,
+    pub height: Option<i32>,
+    pub bitrate: Option<String>,
+    pub frame_rate: Option<String>,
+    pub created_at: NaiveDateTime,
+}
 
-// diesel::table! {
-//     images (id) {
-//         id -> Int4,
-//         name -> Varchar,
-//         file_path -> Varchar,
+#[derive(Insertable)]
+#[diesel(table_name = videos)]
+pub struct NewVideos {
+    pub title: String,
+    pub codec_name: Option<String>,
+    pub duration: Option<String>,
+    pub file_path: String,
+    pub width: Option<i32>,
+    pub height: Option<i32>,
+    pub bitrate: Option<String>,
+    pub frame_rate: Option<String>,
+    pub created_at: NaiveDateTime,
+}
+
+
+// id -> Int4,
+//         title -> Varchar,
 //         description -> Nullable<Varchar>,
-//         exif_data -> Nullable<Varchar>,
-//         format -> Varchar,
-//         size -> Int4,
-//         width -> Int4,
-//         height -> Int4,
+//         codec_name -> Nullable<Varchar>,
+//         duration -> Nullable<Varchar>,
+//         file_path -> Varchar,
+//         width -> Nullable<Int4>,
+//         height -> Nullable<Int4>,
+//         bitrate -> Nullable<Varchar>,
+//         frame_rate -> Nullable<Varchar>,
 //         created_at -> Timestamp,
+//         uploaded_by -> Int4,
 //         deleted_at -> Nullable<Timestamp>,
-//     }
-// }

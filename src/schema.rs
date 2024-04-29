@@ -42,10 +42,27 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    videos (id) {
+        id -> Int4,
+        title -> Varchar,
+        description -> Nullable<Varchar>,
+        codec_name -> Nullable<Varchar>,
+        duration -> Nullable<Varchar>,
+        file_path -> Varchar,
+        width -> Nullable<Int4>,
+        height -> Nullable<Int4>,
+        bitrate -> Nullable<Varchar>,
+        frame_rate -> Nullable<Varchar>,
+        created_at -> Timestamp,
+    }
+}
+
 diesel::joinable!(users -> email_address (user_email));
 
 diesel::allow_tables_to_appear_in_same_query!(
     email_address,
     images,
     users,
+    videos,
 );

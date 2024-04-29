@@ -2,6 +2,7 @@ use async_graphql::SimpleObject;
 
 pub mod images;
 pub mod users;
+pub mod videos;
 
 use crate::graphql_schema::images::mutation::ImageMut;
 use crate::graphql_schema::users::mutation::UserMut;
