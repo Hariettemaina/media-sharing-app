@@ -1312,6 +1312,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ffprobe"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ffef835e1f9ac151db5bb2adbb95c9dfe1f315f987f011dd89cd655b4e9a52c"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "finl_unicode"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2428,6 +2438,7 @@ dependencies = [
  "dotenvy",
  "env_logger",
  "envy",
+ "ffprobe",
  "handlebars 5.1.2",
  "image",
  "lettre",
