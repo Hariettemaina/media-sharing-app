@@ -20,7 +20,7 @@ pub struct VideoUserInput {
 
 #[Object]
 impl UploadVideo {
-    pub async fn upload_video(&self, ctx: &Context<'_>, input: VideoUserInput) -> Result<bool> {
+    pub async fn upload(&self, ctx: &Context<'_>, input: VideoUserInput) -> Result<bool> {
         use crate::schema::videos;
 
         let time_now = Utc::now().naive_utc();
@@ -66,6 +66,7 @@ impl UploadVideo {
                 e
             )));
         }
+        //let video = ffprobe::ffprobe(format!("{}/{}", &video_uploads_dir, &video_path))?;
 
         let video_metadata = ffprobe::ffprobe(filepath.clone())?;
 
