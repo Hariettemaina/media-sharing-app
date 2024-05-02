@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', function () {
     const uploadForm = document.getElementById('upload-form');
     const fileInput = document.getElementById('file-input');
+    const uploadedImage = document.getElementById('uploadedImage');
+    //console.log(uploadedImage);
 
     uploadForm.addEventListener('submit', function (event) {
         event.preventDefault();
@@ -12,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // }
         const formData = new FormData();
         formData.append('operations', JSON.stringify({
-            query:  `
+            query: `
         mutation UploadFile($input: UploadUserInput!) {
             images {
                 upload(input: $input)
@@ -21,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function () {
     `,
             variables: {
                 input: {
-                    image: null, 
+                    image: null,
                     userId: 1
                 }
             }
@@ -31,21 +33,28 @@ document.addEventListener('DOMContentLoaded', function () {
         }));
         formData.append('0', fileInput.files[0]);
 
-        fetch('http://localhost:8000', { 
+        fetch('http://localhost:8000', {
             method: 'POST',
             body: formData,
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.data && data.data.images && data.data.images.upload) {
-                console.log('Upload successful');
-            } else {
-                console.error('Upload failed', data);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
+            .then(response => response.json())
+            .then(data => {
+                console.log('Fullr response;', data);
+                if (data.data && data.data.images && data.data.images.upload) {
+                    console.log('Upload successful');
+                    const imageData = data.data.images.upload;
+
+                    uploadedImage.src = imageData;
+                    uploadedImage.style.display= 'block'
+
+
+                } else {
+                    console.error('Upload failed', data);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
     });
 });
 
