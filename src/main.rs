@@ -132,6 +132,7 @@ async fn main() -> Result<(), InternalError> {
                     .guard(guard::Get())
                     .to(index_graphiql),
             )
+            .service(actix_files::Files::new("/uploads","./uploads").show_files_listing())
             .service(actix_files::Files::new("/", "./templates").show_files_listing())
         //.service(web::resource("/login").route(web::post(). to(login_handler)))
         //.route("/signup", web::get().to(index_signup))

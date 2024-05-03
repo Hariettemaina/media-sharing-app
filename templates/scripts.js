@@ -1,26 +1,20 @@
 document.addEventListener('DOMContentLoaded', function () {
     const uploadForm = document.getElementById('upload-form');
     const fileInput = document.getElementById('file-input');
-    const uploadedImage = document.getElementById('uploadedImage');
-    //console.log(uploadedImage);
+    const mediaGrid = document.querySelector('.media-grid'); 
 
     uploadForm.addEventListener('submit', function (event) {
         event.preventDefault();
 
-        // const id = getUserIdFromCookie();
-        // if (id === null) {
-        //     console.error('User ID not found in cookies.');
-        //     return;
-        // }
         const formData = new FormData();
         formData.append('operations', JSON.stringify({
             query: `
-        mutation UploadFile($input: UploadUserInput!) {
-            images {
-                upload(input: $input)
-            }
-        }
-    `,
+                mutation UploadFile($input: UploadUserInput!) {
+                    images {
+                        upload(input: $input)
+                    }
+                }
+            `,
             variables: {
                 input: {
                     image: null,
@@ -39,15 +33,18 @@ document.addEventListener('DOMContentLoaded', function () {
         })
             .then(response => response.json())
             .then(data => {
-                console.log('Fullr response;', data);
-                if (data.data && data.data.images && data.data.images.upload) {
-                    console.log('Upload successful');
+                console.log('Full response;', data);
+                if (data.data && data.data.images.upload) {
                     const imageData = data.data.images.upload;
 
-                    uploadedImage.src = imageData;
-                    uploadedImage.style.display= 'block'
+                    const imgElement = document.createElement('img');
+                    imgElement.src = imageData;
+                    imgElement.style.width = '200px';
 
-
+                    mediaGrid.appendChild(imgElement);
+                    const storedimages = JSON.parse(localStorage.getItem('uploadedimages')) || [];
+                    storedimages.push(imageData);
+                    localStorage.setItem('uploadedimages', JSON.stringify(storedimages));
                 } else {
                     console.error('Upload failed', data);
                 }
@@ -56,7 +53,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.error('Error:', error);
             });
     });
+
+    function loadStoredImages() {
+        const storedImages = JSON.parse(localStorage.getItem('uploadedimages')) || [];
+        storedImages.forEach(url => {
+            const imageElement = document.createElement('img');
+            imageElement.src = url;
+            imageElement.style.width = '200px';
+            mediaGrid.appendChild(imageElement);
+        });
+    }
+    loadStoredImages();
 });
+
 
 
 // function getUserIdFromCookie() {
@@ -74,3 +83,8 @@ document.addEventListener('DOMContentLoaded', function () {
 //     return null;
 // }
 
+// const id = getUserIdFromCookie();
+// if (id === null) {
+//     console.error('User ID not found in cookies.');
+//     return;
+// }

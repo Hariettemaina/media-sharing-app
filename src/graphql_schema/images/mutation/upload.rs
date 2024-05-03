@@ -3,7 +3,7 @@ use chrono::{NaiveDateTime, Utc};
 use diesel::ExpressionMethods;
 use diesel_async::AsyncPgConnection;
 use diesel_async::{pooled_connection::deadpool::Pool, RunQueryDsl};
-use image::{GenericImageView, imageops::FilterType};
+use image::{imageops::FilterType, GenericImageView};
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::Path;
@@ -85,11 +85,13 @@ impl UploadMedia {
         };
 
         let (width, height) = img.dimensions();
-        // let new_width = width / 2; 
-        // let new_height = height / 2;
-        // let resized_img = img.resize(new_width, new_height, FilterType::Triangle);
-        
-        //     resized_img.save("resized_image.jpeg").expect("Failed to save resized imaged");
+        let new_width = width / 2;
+        let new_height = height / 2;
+        let resized_img = img.resize(new_width, new_height, FilterType::Triangle);
+
+        resized_img
+            .save(&filepath)
+            .expect("Failed to save resized imaged");
         let image_format = image::guess_format(&image).unwrap(); //not supported
 
         // Convert the format to a type string
@@ -168,11 +170,8 @@ impl UploadMedia {
 //      - Test video optimization process.
 //      - Test generation of different viewport versions.
 
-
-
-
 // let (width, height) = img.dimensions();
-// let new_width = width / 2; 
+// let new_width = width / 2;
 // let new_height = height / 2;
 // let resized_img = img.resize(new_width, new_height, FilterType::Triangle); // Improved filter for better quality
 
@@ -272,9 +271,6 @@ impl UploadMedia {
 //         // Convert the image to JPEG format for better compression
 //         let jpeg_img = resized_img.into_raw();
 //         let jpeg_img = image::encode_jpeg(&jpeg_img, 80); // 80 is the quality factor, adjust as needed
-
-//         // Continue with your existing logic for database insertion...
-//         // Remember to replace the original image data with the optimized image data before proceeding
 
 //         Ok(true)
 //     }
