@@ -127,8 +127,8 @@ impl UploadMedia {
                 images::exif_data.eq(None::<String>),
                 images::format.eq(media),
                 images::size.eq(image.len() as i32),
-                images::width.eq(width as i32),
-                images::height.eq(height as i32),
+                images::width.eq(resized_img.width() as i32),
+                images::height.eq(resized_img.height() as i32),
                 images::created_at.eq(time_now),
                 images::deleted_at.eq(None::<NaiveDateTime>),
             ))
