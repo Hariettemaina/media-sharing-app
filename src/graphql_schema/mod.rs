@@ -4,9 +4,9 @@ pub mod images;
 pub mod users;
 pub mod videos;
 
-use crate::graphql_schema::images::mutation::ImageMut;
-use crate::graphql_schema::users::mutation::UserMut;
-use crate::graphql_schema::videos::mutation::VideoMut;
+use self::images::mutation::ImageMut;
+use self::users::mutation::UserMut;
+use self::videos::mutation::VideoMut;
 
 #[derive(SimpleObject, Default)]
 pub struct Mutation {
@@ -15,9 +15,12 @@ pub struct Mutation {
     pub videos: VideoMut
 }
 
-use crate::graphql_schema::users::query::UsersQuery;
+use self::users::query::UsersQuery;
+
+use self::images::query::MediaQuery;
 
 #[derive(SimpleObject, Default)]
 pub struct Query {
     pub users: UsersQuery,
+    pub images: MediaQuery
 }
