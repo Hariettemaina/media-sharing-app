@@ -42,9 +42,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     imgElement.style.width = '200px';
 
                     mediaGrid.appendChild(imgElement);
-                    // const storedimages = JSON.parse(localStorage.getItem('uploadedimages')) || [];
-                    // storedimages.push(imageData);
-                    // localStorage.setItem('uploadedimages', JSON.stringify(storedimages));
+                    const storedimages = JSON.parse(localStorage.getItem('uploadedimages')) || [];
+                    storedimages.push(imageData);
+                    localStorage.setItem('uploadedimages', JSON.stringify(storedimages));
+                    console.log('Stored images:', storedimages); 
 
                 } else {
                     console.error('Upload failed', data);
@@ -55,18 +56,19 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     });
 
-    // function loadStoredImages() {
-    //     const storedImages = JSON.parse(localStorage.getItem('uploadedimages')) || [];
-    //     storedImages.forEach(url => {
-    //         const imageElement = document.createElement('img');
-    //         imageElement.src = url;
-    //         imageElement.style.width = '200px';
-    //         mediaGrid.appendChild(imageElement);
-    //     });
-    // }
+    function loadStoredImages() {
+        const storedImages = JSON.parse(localStorage.getItem('uploadedimages')) || [];
+        console.log('Retrieved stored images:', storedImages); 
 
-    // loadStoredImages();
+        storedImages.forEach(url => {
+            const imageElement = document.createElement('img');
+            imageElement.src = url;
+            imageElement.style.width = '200px';
+            mediaGrid.appendChild(imageElement);
+        });
+    }
 
+    loadStoredImages(); 
     function loadImagesFromServer() {
         fetchImagesFromServer().then(images => {
             images.forEach(imageData => {
@@ -118,6 +120,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
+
 // function getUserIdFromCookie() {
 //     var key, value, i;
 //     var cookieArray = document.cookie.split(';');
@@ -165,7 +168,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
-
 // document.addEventListener('DOMContentLoaded', function () {
 //     const uploadForm = document.getElementById('upload-form');
 //     const fileInput = document.getElementById('file-input');
@@ -197,13 +199,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
 //         fetch('http://localhost:8000', {
 //             method: 'POST',
-//             headers: {
-//                 'Content-Type': 'multipart/form-data',
-//             },
 //             body: formData,
 //         })
-//             .then(response => response.json())
-//             .then(data => {
+//            .then(response => response.json())
+//            .then(data => {
 //                 console.log('Full response;', data);
 //                 if (data.data && data.data.images.upload) {
 //                     const imageData = data.data.images.upload;
@@ -217,55 +216,59 @@ document.addEventListener('DOMContentLoaded', function () {
 //                     console.error('Upload failed', data);
 //                 }
 //             })
-//             .catch(error => {
+//            .catch(error => {
 //                 console.error('Error:', error);
 //             });
 //     });
 
-// function loadImagesFromServer() {
-//     fetchImagesFromServer().then(images => {
-//         images.forEach(imageData => {
-//             const imgElement = document.createElement('img');
-//             imgElement.src = imageData;
-//             imgElement.style.width = '200px';
-//             mediaGrid.appendChild(imgElement);
+//     function loadImagesFromServer(userId) {
+//         fetchImagesFromServer(userId).then(images => {
+//             images.forEach(imageData => {
+//                 const imgElement = document.createElement('img');
+//                 imgElement.src = imageData;
+//                 imgElement.style.width = '200px';
+//                 mediaGrid.appendChild(imgElement);
+//             });
+//         }).catch(error => {
+//             console.error('Error fetching images:', error);
 //         });
-//     }).catch(error => {
-//         console.error('Error fetching images:', error);
-//     });
-// }
-
-// async function fetchImagesFromServer() {
-//     try {
-//         const response = await fetch('http://localhost:8000', {
-//             method: 'POST',
-//             headers: {
-//                 'Content-Type': 'application/json',
-//                 'Accept': 'application/json',
-//             },
-//             body: JSON.stringify({
-//                 query: `
-//                     query GetImages {
-//                         images {
-//                             getImages {filePath}
-//                         }
-//                     }
-//                 `
-//             }),
-//         });
-
-//         const data = await response.json();
-
-//         if (data.data && Array.isArray(data.data.images)) {
-//             return data.data.images.map(image => image.filePath);
-//         } else {
-//             throw new Error('No images found');
-//         }
-//     } catch (error) {
-//         console.error('Error fetching images:', error);
-//         throw error;
 //     }
-// }
 
-//loadImagesFromServer();
-//});
+//     async function fetchImagesFromServer(userId) {
+//         try {
+//             const response = await fetch('http://localhost:8000', {
+//                 method: 'POST',
+//                 headers: {
+//                     'Content-Type': 'application/json',
+//                     'Accept': 'application/json',
+//                 },
+//                 body: JSON.stringify({
+//                     query: `
+//                         query GetImages($userId: Int!) {
+//                             images(userId: $userId) {
+//                                 getImages 
+//                             }
+//                         }
+//                     `,
+//                     variables: {
+//                         userId: userId
+//                     }
+//                 }),
+//             });
+
+//             const data = await response.json();
+
+//             if (data.data && Array.isArray(data.data.images)) {
+//                 return data.data.images;
+//             } else {
+//                 throw new Error('No images found');
+//             }
+//         } catch (error) {
+//             console.error('Error fetching images:', error);
+//             throw error;
+//         }
+//     }
+
+//     // Example usage: Load images for a specific user
+//     loadImagesFromServer(1); // Replace 1 with the actual user ID
+// });
