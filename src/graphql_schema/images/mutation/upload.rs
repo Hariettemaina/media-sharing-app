@@ -1,15 +1,29 @@
+use amqprs::{
+    callbacks::{DefaultChannelCallback, DefaultConnectionCallback},
+    channel::{BasicPublishArguments, QueueDeclareArguments},
+    connection::{Connection, OpenConnectionArguments},
+    BasicProperties,
+};
+
 use async_graphql::{Context, InputObject, Object, Result, Upload};
 use chrono::{NaiveDateTime, Utc};
 use diesel::ExpressionMethods;
 use diesel_async::AsyncPgConnection;
 use diesel_async::{pooled_connection::deadpool::Pool, RunQueryDsl};
 use image::{imageops::FilterType, GenericImageView};
+use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::Path;
 use uuid::Uuid;
 
 use crate::PhotoError;
+
+#[derive(Serialize, Deserialize)]
+struct MediaProcessingTask {
+    media_id: uuid::Uuid,
+    file_path: String,
+}
 
 #[derive(Default)]
 pub struct UploadMedia;
@@ -139,10 +153,51 @@ impl UploadMedia {
                 PhotoError::DatabaseError
             })?;
 
-        Ok(filepath.clone())
+        //Publish the media processing task to RabbitMQ
+        let conn = Connection::open(&OpenConnectionArguments::new(
+            "localhost",
+            5672,
+            "guest",
+            "guest",
+        ))
+        .await
+        .unwrap();
+        conn.register_callback(DefaultConnectionCallback)
+            .await
+            .unwrap();
+
+        let channel = conn.open_channel(None).await?;
+        channel
+            .register_callback(DefaultChannelCallback)
+            .await
+            .unwrap();
+
+        let queue_name = "media_queue";
+        let q_args = QueueDeclareArguments::new(queue_name)
+            .durable(true)
+            .finish();
+
+        let (_, _, _) = channel.queue_declare(q_args).await.unwrap().unwrap();
+
+        // let queue = channel
+        //     .queue_declare(queue_name)
+        //     .await?;
+
+        let media_task = MediaProcessingTask {
+            media_id: Uuid::new_v4(),
+            file_path: filepath.clone(),
+        };
+
+        let message_bytes = serde_json::to_vec(&media_task)?;
+        let _message_str =
+            String::from_utf8(message_bytes.clone()).expect("Failed to convert bytes to string");
+        channel
+            .basic_publish(BasicProperties::default(), message_bytes, BasicPublishArguments::new("", &queue_name))
+            .await?;
+
+        Ok(filepath)
     }
 }
-
 //upload_value
 // pub filename: String,
 // pub content_type: Option<String>,

@@ -6,3 +6,4 @@ pub use error::{InternalError, PhotoError};
 pub mod password;
 pub mod mailer;
 pub mod tests;
+pub mod services;
