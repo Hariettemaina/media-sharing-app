@@ -1,84 +1,84 @@
-#[allow(dead_code)]
-use amqprs::{
-    callbacks::DefaultConnectionCallback,
-    channel::{BasicAckArguments, BasicConsumeArguments, QueueDeclareArguments},
-    connection::{Connection, OpenConnectionArguments},
-};
-use image::GenericImageView;
-use serde::{Deserialize, Serialize};
-use std::error::Error;
+// #[allow(dead_code)]
+// use amqprs::{
+//     callbacks::DefaultConnectionCallback,
+//     channel::{BasicAckArguments, BasicConsumeArguments, QueueDeclareArguments},
+//     connection::{Connection, OpenConnectionArguments},
+// };
+// use image::GenericImageView;
+// use serde::{Deserialize, Serialize};
+// use std::error::Error;
 
-#[derive(Serialize, Deserialize, Debug)]
-struct MediaProcessingTask {
-    media_id: uuid::Uuid,
-    file_path: String,
-}
+// #[derive(Serialize, Deserialize, Debug)]
+// struct MediaProcessingTask {
+//     media_id: uuid::Uuid,
+//     file_path: String,
+// }
 
-async fn process_media(task: &MediaProcessingTask) -> Result<(), Box<dyn Error>> {
-    let metadata = image::open(&task.file_path)?;
-    let dimensions = metadata.dimensions();
-    let resized_image = image::imageops::resize(
-        &metadata,
-        dimensions.0 / 2,
-        dimensions.1 / 2,
-        image::imageops::FilterType::Lanczos3,
-    );
-    let mut resized_image_path = task.file_path.clone();
-    resized_image_path.push_str("_resized");
-    resized_image.save(&resized_image_path)?;
+// async fn process_media(task: &MediaProcessingTask) -> Result<(), Box<dyn Error>> {
+//     let metadata = image::open(&task.file_path)?;
+//     let dimensions = metadata.dimensions();
+//     let resized_image = image::imageops::resize(
+//         &metadata,
+//         dimensions.0 / 2,
+//         dimensions.1 / 2,
+//         image::imageops::FilterType::Lanczos3,
+//     );
+//     let mut resized_image_path = task.file_path.clone();
+//     resized_image_path.push_str("_resized");
+//     resized_image.save(&resized_image_path)?;
 
-    // For example:
-    // 1. Fetch media metadata from the database
-    // 2. Optimize the media file for web viewing
-    // 3. Generate different versions for various viewports
-    // 4. Update the database with the processed media information
+//     // For example:
+//     // 1. Fetch media metadata from the database
+//     // 2. Optimize the media file for web viewing
+//     // 3. Generate different versions for various viewports
+//     // 4. Update the database with the processed media information
 
-    println!("Processing media: {:?}", task);
-    Ok(())
-}
+//     println!("Processing media: {:?}", task);
+//     Ok(())
+// }
 
-#[tokio::main]
+// #[tokio::main]
 
-async fn main_() -> Result<(), Box<dyn Error>> {
-    let connection = Connection::open(&OpenConnectionArguments::new(
-        "localhost",
-        5672,
-        "guest",
-        "guest",
-    ))
-    .await
-    .unwrap();
-    connection
-        .register_callback(DefaultConnectionCallback)
-        .await
-        .unwrap();
-    let channel = connection.open_channel(None).await?;
+// async fn main_() -> Result<(), Box<dyn Error>> {
+//     let connection = Connection::open(&OpenConnectionArguments::new(
+//         "localhost",
+//         5672,
+//         "guest",
+//         "guest",
+//     ))
+//     .await
+//     .unwrap();
+//     connection
+//         .register_callback(DefaultConnectionCallback)
+//         .await
+//         .unwrap();
+//     let channel = connection.open_channel(None).await?;
     
-    let queue_name = "media_queue";
-    let q_args = QueueDeclareArguments::new(queue_name)
-        .durable(true)
-        .finish();
-    let (_, _, _) = channel.queue_declare(q_args).await.unwrap().unwrap();
+//     let queue_name = "media_queue";
+//     let q_args = QueueDeclareArguments::new(queue_name)
+//         .durable(true)
+//         .finish();
+//     let (_, _, _) = channel.queue_declare(q_args).await.unwrap().unwrap();
 
-    let consumer_args = BasicConsumeArguments::default()
-        .queue(String::from(queue_name))
-        .finish();
-    let (_ctag, mut rx) = channel.basic_consume_rx(consumer_args).await.unwrap();
+//     let consumer_args = BasicConsumeArguments::default()
+//         .queue(String::from(queue_name))
+//         .finish();
+//     let (_ctag, mut rx) = channel.basic_consume_rx(consumer_args).await.unwrap();
 
-    while let Some(delivery) = rx.recv().await {
-        let task: MediaProcessingTask = serde_json::from_slice(delivery.content.as_ref().unwrap())?;
-        process_media(&task).await?;
-        channel
-            .basic_ack(BasicAckArguments::new(
-                delivery.deliver.unwrap().delivery_tag(),
-                false,
-            ))
-            .await
-            .unwrap();
-    }
+//     while let Some(delivery) = rx.recv().await {
+//         let task: MediaProcessingTask = serde_json::from_slice(delivery.content.as_ref().unwrap())?;
+//         process_media(&task).await?;
+//         channel
+//             .basic_ack(BasicAckArguments::new(
+//                 delivery.deliver.unwrap().delivery_tag(),
+//                 false,
+//             ))
+//             .await
+//             .unwrap();
+//     }
 
-    Ok(())
-}
+//     Ok(())
+//}
 
 // use async_graphql::{Context, InputObject, Object, Result, Upload};
 // use chrono::{NaiveDateTime, Utc};
@@ -240,4 +240,39 @@ async fn main_() -> Result<(), Box<dyn Error>> {
 //     // Your RabbitMQ connection and channel setup here
 //     // This is a placeholder for the actual implementation
 //     Ok(())
+// }
+
+// use amqprs::{channel::Channel, connection::Connection};
+// use tokio::sync::Mutex;
+// use tokio_stream::wrappers::UnboundedReceiverStream;
+
+// pub struct AmqpClient {
+//     connection: Mutex<Option<Connection>>,
+//     channel: Mutex<Option<Channel>>,
+// }
+
+// impl AmqpClient {
+//     pub async fn connect(url: &str) -> Self {
+//         let transport = Transport::Tcp(TcpStream::connect(url).await.unwrap());
+//         let session = Session::start(transport).await.unwrap();
+//         let connection = session.connection().await.unwrap();
+//         let channel = connection.create_channel().await.unwrap();
+
+//         AmqpClient {
+//             connection: Mutex::new(Some(connection)),
+//             channel: Mutex::new(Some(channel)),
+//         }
+//     }
+
+//     pub async fn send_message(&self, queue_name: &str, message: &[u8]) -> Result<()> {
+//         let channel = self.channel.lock().await.as_ref().unwrap();
+//         channel.basic_publish(queue_name, "", message).await.unwrap()
+//     }
+
+//     pub async fn receive_messages(&self, queue_name: &str) -> UnboundedReceiverStream<Result<Vec<u8>>> {
+//         let channel = self.channel.lock().await.as_ref().unwrap();
+//         let consumer_tag = channel.basic_consume(queue_name, "", false, true).await.unwrap();
+//         let stream = channel.consume(consumer_tag).await.unwrap();
+//         UnboundedReceiverStream::new(stream)
+//     }
 // }

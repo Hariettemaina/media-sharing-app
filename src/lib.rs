@@ -7,3 +7,4 @@ pub mod password;
 pub mod mailer;
 pub mod tests;
 pub mod services;
+pub mod rabbitmq;

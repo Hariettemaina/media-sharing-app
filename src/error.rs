@@ -26,6 +26,8 @@ pub enum PhotoError {
 #[derive(Debug, Error)]
 pub enum InternalError {
     #[error("Internal server error")]
+    Image(#[from] image::ImageError),
+    #[error("Internal server error")]
     Build(#[from] BuildError),
     #[error("Internal server error")]
     Io(#[from] std::io::Error),
