@@ -59,12 +59,12 @@ impl ImageProcessor {
                     PhotoError::DatabaseError
                 })?;
 
-            let image_path = format!(
-                "image_uploads/{}-{}.{}",
+            let filepath = format!(
+                "uploads/{}-{}.{}",
                 upload_value.filename, time_now, extension
             );
 
-            let mut file = fs::File::create(&image_path).map_err(|err| {
+            let mut file = fs::File::create(&filepath).map_err(|err| {
                 log::error!("Failed to create image file: {}", err);
                 PhotoError::Internal(InternalError::Io(err))
             })?;
@@ -74,7 +74,7 @@ impl ImageProcessor {
                 PhotoError::Internal(InternalError::Io(err))
             })?;
 
-            let img = image::open(&image_path).map_err(|err| {
+            let img = image::open(&filepath).map_err(|err| {
                 log::error!("Failed to open image file: {}", err);
                 let io_error =
                     std::io::Error::new(std::io::ErrorKind::Other, "Failed to open image");
@@ -100,7 +100,7 @@ impl ImageProcessor {
                     *target_size,
                     image::imageops::FilterType::Nearest,
                 );
-                let output_path = format!("resized_{}_{}.{}", image_path, target_size, extension);
+                let output_path = format!("resized_{}_{}.{}", filepath, target_size, extension);
                 let mut output_file = fs::File::create(&output_path).map_err(|err| {
                     log::error!("Failed to create resized image file: {}", err);
                     PhotoError::Internal(InternalError::Io(err))
@@ -113,9 +113,9 @@ impl ImageProcessor {
                     })?;
             }
 
-            Ok(image_path)
+            Ok(filepath)
         } else {
-            Err(PhotoError::UserAccountAlreadyExists)
+            Err(PhotoError::DatabaseError)
         }
     }
 }

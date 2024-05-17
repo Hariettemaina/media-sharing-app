@@ -39,8 +39,9 @@ tempfile = "3.0.0"
 ffprobe = "0.4.0"
 amqprs = "1.6.1"
 imageproc = "0.24.0"
-tokio = { version = "1.32", features = ["full"] }
-rabbitmq = {path = "./rabbitmq"}
+# tokio = { version = "1.32", features = ["full"] }
+tokio = { version = "1.32", features = ["rt"] }
+#rabbitmq = {path = "./rabbit-mq"}
 
 
 [dev-dependencies]
