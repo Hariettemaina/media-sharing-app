@@ -41,7 +41,7 @@ amqprs = "1.6.1"
 imageproc = "0.25.0"
 # tokio = { version = "1.32", features = ["full"] }
 tokio = { version = "1.32", features = ["rt"] }
-rabbitmq = { path = "./rabbitmq" }
+# rabbitmq = { path = "./rabbitmq" }
 
 
 

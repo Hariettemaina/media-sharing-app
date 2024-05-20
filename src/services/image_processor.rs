@@ -6,7 +6,7 @@ use diesel::ExpressionMethods;
 use diesel_async::pooled_connection::deadpool::Pool;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use image::{GenericImageView, ImageFormat};
-use rabbitmq::producer::publish_task;
+use crate::rabbitmq::rabbit::publish_to_rabbitmq;
 use std::ffi::OsStr;
 use std::fs;
 use std::io::{Read, Write};
@@ -158,8 +158,8 @@ impl ImageProcessor {
                 .await?;
 
             let queue_name = "image_processing_queue";
-            let message = format!("{}|{}", input.user_id, filepath);
-            publish_task(queue_name, &message)
+            let message = format!("User ID: {}, File Path: {}", input.user_id, filepath);
+            publish_to_rabbitmq(queue_name, &message)
                 .map_err(|e| {
                     log::error!("Failed to publish task to RabbitMQ: {}", e);
                     async_graphql::Error::new("Failed to publish task to RabbitMQ")

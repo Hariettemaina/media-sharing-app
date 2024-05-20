@@ -1,6 +1,5 @@
 use amqprs::{
-    callbacks::DefaultConnectionCallback,
-    channel::{ BasicPublishArguments, QueueDeclareArguments},
+    channel::BasicPublishArguments,
     connection::{Connection, OpenConnectionArguments},
     error::Error,
     BasicProperties,
@@ -17,41 +16,18 @@ pub async fn connect_to_rabbitmq(
     Ok(conn)
 }
 
-
-pub async fn publish_task(queue_name: &str, message: &str) -> Result<(), Error> {
+// Function to publish a message to RabbitMQ
+pub async fn publish_to_rabbitmq(queue_name: &str, message: &str) -> Result<(), Error> {
     print!("connecting...");
-    let connection = Connection::open(&OpenConnectionArguments::new(
-        "localhost",
-        5672,
-        "guest",
-        "guest",
-    ))
-    .await?;
-
-    connection
-        .register_callback(DefaultConnectionCallback)
-        .await
-        .unwrap();
-
-    let channel = connection.open_channel(None).await?;
-
-
-    let q_args = QueueDeclareArguments::default()
-        .queue(queue_name.to_owned()) 
-        .durable(true)
-        .finish();
-
-    if let Some((_, _, _)) = channel.queue_declare(q_args).await.unwrap() {
-    } else {
-        panic!("Failed to declare queue");
-    }
-
-    // Now, publish the message
-    let props = BasicProperties::default();
-    let publish_args = BasicPublishArguments::new(queue_name, ""); 
-    channel
-        .basic_publish(props, message.as_bytes().to_vec(), publish_args)
-        .await?;
-
+    let connection_args = OpenConnectionArguments::new("localhost", 5672, "guest", "guest");
+    let connection = Connection::open(&connection_args).await?;
+    let channel = connection.open_channel(Some(0)).await?;
+    
+    let publish_args = BasicPublishArguments::new(queue_name, "");
+    let properties = BasicProperties::default();
+    channel.basic_publish(properties, message.as_bytes().to_vec(), publish_args).await?;
+    
+    channel.close().await?;
+    connection.close().await?;
     Ok(())
 }
