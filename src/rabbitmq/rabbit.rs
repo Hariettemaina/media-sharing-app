@@ -40,12 +40,12 @@
 //         match result {
 //             Ok(message) => {
 //                 let image_data = message.content.unwrap();
-//                 process_image_data(&image_data).await.unwrap(); // Assuming this function is implemented elsewhere
+//                 process_image_data(&image_data).await.unwrap();
 //                 channel.basic_ack(message.delivery_tag()).await.unwrap();
 //             }
 //             Err(error) => {
 //                 // Handle the error case
-//                 eprintln!("Error consuming message: {}", error);
+//                 println!("Error consuming message: {}", error);
 //             }
 //         }
 //     }

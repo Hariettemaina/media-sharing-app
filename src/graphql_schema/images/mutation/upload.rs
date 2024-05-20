@@ -25,7 +25,7 @@
 //      - Test video optimization process.
 //      - Test generation of different viewport versions.
 
-use crate::rabbitmq::rabbit_connection::publish_task;
+
 use crate::schema::images;
 use crate::PhotoError;
 use async_graphql::futures_util::TryFutureExt;
@@ -114,7 +114,8 @@ impl UploadMedia {
             768,  // iPads/Tablets
             1024, // Desktops
             1024, // Laptops
-            1440, // Extra large screens
+            1440,
+            2650, // Extra large screens
         ];
 
         // Process each viewport category
@@ -159,12 +160,12 @@ impl UploadMedia {
                 })
                 .await?;
         }
-        let queue_name = "image_processing";
-        let message = format!("{}|{}", input.user_id, filepath);
-        publish_task(queue_name, &message).await.map_err(|e| {
-            log::error!("Failed to publish task to RabbitMQ: {}", e);
-            async_graphql::Error::new("Failed to publish task to RabbitMQ")
-        })?;
+        // let queue_name = "image_processing";
+        // let message = format!("{}|{}", input.user_id, filepath);
+        // publish_task(queue_name, &message).await.map_err(|e| {
+        //     log::error!("Failed to publish task to RabbitMQ: {}", e);
+        //     async_graphql::Error::new("Failed to publish task to RabbitMQ")
+        // })?;
 
         Ok(filepath)
     }

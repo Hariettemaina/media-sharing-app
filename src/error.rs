@@ -20,7 +20,9 @@ pub enum PhotoError {
     #[error("Email Not Found")]
     EmailNotFound,
     #[error("Database Error")]
-    DatabaseError
+    DatabaseError,
+    #[error("InvalidExtension")]
+    InvalidExtension,
 }
 
 #[derive(Debug, Error)]

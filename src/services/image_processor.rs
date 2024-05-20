@@ -1,6 +1,12 @@
+use crate::schema::images;
+use async_graphql::futures_util::TryFutureExt;
 use async_graphql::{Context, InputObject, Object, Result, Upload};
-use chrono::Utc;
+use chrono::{NaiveDateTime, Utc};
+use diesel::ExpressionMethods;
+use diesel_async::pooled_connection::deadpool::Pool;
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use image::{GenericImageView, ImageFormat};
+use rabbitmq::producer::publish_task;
 use std::ffi::OsStr;
 use std::fs;
 use std::io::{Read, Write};
@@ -14,15 +20,12 @@ pub struct ImageProcessor;
 #[derive(InputObject)]
 pub struct ImageUploadInput {
     image: Upload,
+    user_id: i32,
 }
 
 #[Object]
 impl ImageProcessor {
-    async fn process_image(
-        &self,
-        ctx: &Context<'_>,
-        input: ImageUploadInput,
-    ) -> Result<String, PhotoError> {
+    async fn process_image(&self, ctx: &Context<'_>, input: ImageUploadInput) -> Result<String> {
         dotenvy::dotenv().ok();
 
         let time_now = Utc::now().naive_local();
@@ -84,6 +87,24 @@ impl ImageProcessor {
 
             let (width, height) = img.dimensions();
             let image_format = ImageFormat::from_extension(extension).unwrap();
+            let image_format_str = match image_format {
+                ImageFormat::Png => "PNG",
+                ImageFormat::Jpeg => "JPEG",
+                ImageFormat::Gif => "GIF",
+                ImageFormat::Bmp => "BMP",
+                ImageFormat::Ico => "ICO",
+                ImageFormat::Pnm => "PNM",
+                ImageFormat::WebP => "WEBP",
+                ImageFormat::Hdr => "HDR",
+                ImageFormat::Tiff => "TIFF",
+                ImageFormat::Tga => "Tga",
+                ImageFormat::Dds => "DdS",
+                ImageFormat::OpenExr => "OpenEXR",
+                ImageFormat::Farbfeld => "Farbfeld",
+                ImageFormat::Avif => "AVIF",
+                ImageFormat::Qoi => "Qoi",
+                _ => "None",
+            };
 
             log::info!(
                 "Image width: {}, height: {}, format: {:#?}",
@@ -93,7 +114,7 @@ impl ImageProcessor {
             );
 
             //  different viewports
-            let target_viewport_sizes = vec![480, 768, 1024, 1024, 1440];
+            let target_viewport_sizes = vec![480, 768, 1024, 1024, 1440, 2650];
             for target_size in target_viewport_sizes.iter() {
                 let resized_img = img.resize(
                     *target_size,
@@ -113,13 +134,44 @@ impl ImageProcessor {
                     })?;
             }
 
+            let pool: &Pool<AsyncPgConnection> = ctx.data()?;
+            let mut conn = pool.get().await?;
+
+            diesel::insert_into(images::table)
+                .values((
+                    images::name.eq(upload_value.filename.clone()),
+                    images::file_path.eq(&filepath),
+                    images::description.eq(Some("Processed image".to_string())),
+                    images::exif_data.eq(None::<String>),
+                    images::format.eq(image_format_str),
+                    images::size.eq(image_data.len() as i32),
+                    images::width.eq(width as i32),
+                    images::height.eq(height as i32),
+                    images::created_at.eq(time_now),
+                    images::deleted_at.eq(None::<NaiveDateTime>),
+                ))
+                .execute(&mut conn)
+                .map_err(|e| {
+                    log::error!("Failed to insert image metadata: {}", e);
+                    PhotoError::DatabaseError
+                })
+                .await?;
+
+            let queue_name = "image_processing_queue";
+            let message = format!("{}|{}", input.user_id, filepath);
+            publish_task(queue_name, &message)
+                .map_err(|e| {
+                    log::error!("Failed to publish task to RabbitMQ: {}", e);
+                    async_graphql::Error::new("Failed to publish task to RabbitMQ")
+                })
+                .await?;
             Ok(filepath)
         } else {
-            Err(PhotoError::DatabaseError)
+            log::error!("Invalid extension: {}", upload_value.filename);
+            Err(PhotoError::InvalidExtension.into())
         }
     }
 }
-
 // mobile devices481px
 // ipads,tablets  481px-768px
 // desktop 1024px+
