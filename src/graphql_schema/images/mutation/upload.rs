@@ -160,12 +160,7 @@ impl UploadMedia {
                 })
                 .await?;
         }
-        // let queue_name = "image_processing";
-        // let message = format!("{}|{}", input.user_id, filepath);
-        // publish_task(queue_name, &message).await.map_err(|e| {
-        //     log::error!("Failed to publish task to RabbitMQ: {}", e);
-        //     async_graphql::Error::new("Failed to publish task to RabbitMQ")
-        // })?;
+        
 
         Ok(filepath)
     }

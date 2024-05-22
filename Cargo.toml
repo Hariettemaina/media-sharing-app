@@ -3,6 +3,13 @@ name = "photos"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "receive"
+path = "src/receive.rs"
+
+
+
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -41,7 +48,7 @@ amqprs = "1.6.1"
 imageproc = "0.25.0"
 # tokio = { version = "1.32", features = ["full"] }
 tokio = { version = "1.32", features = ["rt"] }
-# rabbitmq = { path = "./rabbitmq" }
+# rabbitmq = {path = "./rabbitmq"}
 
 
 

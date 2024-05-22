@@ -10,6 +10,7 @@ use photos::graphql_schema::{Mutation, Query};
 
 use photos::mailer::BrevoApi;
 use photos::password::PassWordHasher;
+
 use photos::InternalError;
 
 pub type ApplicationSchema = Schema<Query, Mutation, EmptySubscription>;
@@ -94,6 +95,7 @@ async fn main() -> Result<(), InternalError> {
     let brevo_api = BrevoApi::new(api_key, email);
 
     let database_url = dotenvy::var("DATABASE_URL").unwrap();
+    
 
     let secret_key = Key::generate();
 
@@ -132,7 +134,7 @@ async fn main() -> Result<(), InternalError> {
                     .guard(guard::Get())
                     .to(index_graphiql),
             )
-            .service(actix_files::Files::new("/uploads","./uploads").show_files_listing())
+            .service(actix_files::Files::new("/uploads", "./uploads").show_files_listing())
             .service(actix_files::Files::new("/", "./templates").show_files_listing())
         //.service(web::resource("/login").route(web::post(). to(login_handler)))
         //.route("/signup", web::get().to(index_signup))

@@ -1,4 +1,7 @@
 use crate::schema::images;
+use amqprs::channel::{BasicPublishArguments, QueueDeclareArguments};
+use amqprs::connection::{Connection, OpenConnectionArguments};
+use amqprs::BasicProperties;
 use async_graphql::futures_util::TryFutureExt;
 use async_graphql::{Context, InputObject, Object, Result, Upload};
 use chrono::{NaiveDateTime, Utc};
@@ -6,7 +9,6 @@ use diesel::ExpressionMethods;
 use diesel_async::pooled_connection::deadpool::Pool;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use image::{GenericImageView, ImageFormat};
-use crate::rabbitmq::rabbit::publish_to_rabbitmq;
 use std::ffi::OsStr;
 use std::fs;
 use std::io::{Read, Write};
@@ -20,7 +22,6 @@ pub struct ImageProcessor;
 #[derive(InputObject)]
 pub struct ImageUploadInput {
     image: Upload,
-    user_id: i32,
 }
 
 #[Object]
@@ -156,21 +157,49 @@ impl ImageProcessor {
                     PhotoError::DatabaseError
                 })
                 .await?;
-
-            let queue_name = "image_processing_queue";
-            let message = format!("User ID: {}, File Path: {}", input.user_id, filepath);
-            publish_to_rabbitmq(queue_name, &message)
-                .map_err(|e| {
-                    log::error!("Failed to publish task to RabbitMQ: {}", e);
-                    async_graphql::Error::new("Failed to publish task to RabbitMQ")
-                })
-                .await?;
+            // // Publish the image path to RabbitMQ
+            // self.publish_image_to_rabbitmq(&ctx, filepath.clone())
+            //     .await?;
             Ok(filepath)
         } else {
             log::error!("Invalid extension: {}", upload_value.filename);
             Err(PhotoError::InvalidExtension.into())
         }
     }
+    // async fn publish_image_to_rabbitmq(&self, filepath: String) -> Result<String> {
+    //     dotenvy::dotenv().ok();
+
+    //     // Corrected connection arguments order
+    //     let args = OpenConnectionArguments::new("localhost", 5672, "guest", "guest");
+
+    //     // Establish a connection
+    //     let connection = Connection::open(&args).await?;
+
+    //     // Create a channel
+    //     let channel = connection.open_channel(None).await?;
+
+    //     // Declare the queue if it doesn't exist
+    //     let declare_args = QueueDeclareArguments::new("image_queue");
+    //     channel.queue_declare(declare_args).await?;
+
+    //     // Prepare the message body as a Vec<u8>
+    //     let message_body = format!("Image processed: {}", filepath);
+    //     let message_bytes = message_body.into_bytes(); // Convert &str to Vec<u8>
+
+    //     // Create BasicProperties and BasicPublishArguments instances
+    //     let basic_properties = BasicProperties::default().with_delivery_mode(2).finish(); // Minimal arguments
+    //     let basic_publish_args = BasicPublishArguments::default();
+
+    //     // Publish the message
+    //     channel
+    //         .basic_publish(
+    //             basic_properties,   // BasicProperties with default settings
+    //             message_bytes,      // message body as Vec<u8>
+    //             basic_publish_args, // BasicPublishArguments with default settings
+    //         )
+    //         .await?;
+    //     Ok(filepath)
+    // }
 }
 // mobile devices481px
 // ipads,tablets  481px-768px
