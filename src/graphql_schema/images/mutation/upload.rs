@@ -25,11 +25,18 @@
 //      - Test video optimization process.
 //      - Test generation of different viewport versions.
 
+// **Backpressure Handling with RabbitMQ**
+
+// - **Description:** Integrate RabbitMQ to handle backpressure when processing media files.
+
+// - **Expected Functionality:** RabbitMQ queues are used to manage the flow of media processing tasks. 
+//Workers consume tasks from the queue and process them asynchronously.
+
 use crate::schema::images;
 use crate::PhotoError;
-use amqprs::{callbacks, BasicProperties, DELIVERY_MODE_PERSISTENT};
 use amqprs::channel::{BasicPublishArguments, QueueDeclareArguments};
 use amqprs::connection::{Connection, OpenConnectionArguments};
+use amqprs::{callbacks, BasicProperties, DELIVERY_MODE_PERSISTENT};
 use async_graphql::futures_util::TryFutureExt;
 use async_graphql::{Context, InputObject, Object, Result, Upload};
 use chrono::{NaiveDateTime, Utc};
@@ -77,7 +84,10 @@ impl UploadMedia {
                 .and_then(std::ffi::OsStr::to_str)
                 .unwrap_or("bin") //default value if path does not have an extension
         );
-        let extension = Path::new(&filename).extension().and_then(std::ffi::OsStr::to_str).unwrap_or("bin");
+        let extension = Path::new(&filename)
+            .extension()
+            .and_then(std::ffi::OsStr::to_str)
+            .unwrap_or("bin");
         let uploads_dir = "./uploads";
         let user_uploads_dir = format!("{}/{}", uploads_dir, input.user_id);
 
@@ -182,25 +192,22 @@ impl UploadMedia {
                 .await?;
         }
 
-            // RabbitMQ publishing logic
-            let message = format!(
-                "Image uploaded: {}\nPath: {}\nFormat: {}\nSize: {} bytes\nDimensions: {}x{}",
-                upload_value.filename,
-                filepath,
-                image_format_str,
-                image_data.len(),
-                width,
-                height
-            );
+        // RabbitMQ publishing logic
+        let message = format!(
+            "Image uploaded: {}\nPath: {}\nFormat: {}\nSize: {} bytes\nDimensions: {}x{}",
+            upload_value.filename,
+            filepath,
+            image_format_str,
+            image_data.len(),
+            width,
+            height
+        );
 
-            send_message_to_rabbitmq(message).await.unwrap();
-
+        send_message_to_rabbitmq(message).await.unwrap();
 
         Ok(filepath)
     }
 }
-
-
 
 async fn send_message_to_rabbitmq(message: String) -> Result<(), Box<dyn std::error::Error>> {
     let connection = Connection::open(&OpenConnectionArguments::new(
@@ -209,7 +216,8 @@ async fn send_message_to_rabbitmq(message: String) -> Result<(), Box<dyn std::er
         "guest",
         "guest",
     ))
-    .await.unwrap();
+    .await
+    .unwrap();
     connection
         .register_callback(callbacks::DefaultConnectionCallback)
         .await?;
@@ -221,21 +229,21 @@ async fn send_message_to_rabbitmq(message: String) -> Result<(), Box<dyn std::er
         .await?;
     let queue_name = "image_processing_queue";
     // Declare an exchange
-    
 
     // Declare a queue
     let queue_args = QueueDeclareArguments::new(&queue_name);
     channel.queue_declare(queue_args).await?;
 
-
     // Publish the message
-    let props = BasicProperties::default().with_delivery_mode(DELIVERY_MODE_PERSISTENT).finish();
+    let props = BasicProperties::default()
+        .with_delivery_mode(DELIVERY_MODE_PERSISTENT)
+        .finish();
     let publish_args = BasicPublishArguments::new("", &queue_name);
     channel
         .basic_publish(props, message.into_bytes(), publish_args)
         .await?;
     println!(" [x] Sent \"Hello World!\"");
-    // channel.close().await?;
+    channel.close().await?;
     connection.close().await?;
     Ok(())
 }

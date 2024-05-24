@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 
+
+[[bin]]
+name = "worker"
+path = "src/worker.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -42,7 +46,9 @@ amqprs = "1.6.1"
 imageproc = "0.25.0"
 # tokio = { version = "1.32", features = ["full"] }
 tokio = { version = "1.32", features = ["rt"] }
-# rabbitmq = {path = "./rabbitmq"}
+futures = "0.3.30"
+actix-web-actors = "4.3.0"
+
 
 
 

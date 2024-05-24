@@ -64,6 +64,26 @@ async fn index(schema: web::Data<ApplicationSchema>, req: GraphQLRequest) -> Gra
 //     let path: PathBuf = "./templates/login.html".parse().unwrap();
 //     Ok(NamedFile::open(path)?)
 // }
+// pub fn index_ws(
+//     schema: web::Data<ApplicationSchema>,
+//     req: HttpRequest,
+//     payload: web::Payload,
+//     data: web::Data<AuthClient>,
+//     session: Session,
+// ) -> Result<HttpResponse> {
+//     let user_session = Shared::new(SendWrapper::new(session.clone()));
+//     let _client = data.as_ref();
+
+//     let mut data = Data::default();
+
+//     let x = format!("{}", user_session.get::<i32>("user")?.unwrap());
+//     data.insert(x);
+
+//     GraphQLSubscription::new(Schema::clone(&*schema))
+//         .with_data(data)
+//         .start(&req, payload)
+// }
+
 
 async fn index_graphiql() -> Result<HttpResponse> {
     Ok(HttpResponse::Ok()
@@ -134,6 +154,12 @@ async fn main() -> Result<(), InternalError> {
                     .guard(guard::Get())
                     .to(index_graphiql),
             )
+            // .service(
+            //     web::resource("/")
+            //         .guard(guard::Get())
+            //         .guard(guard::Header("upgrade", "websocket"))
+            //         .to(index_ws),
+            // )
             .service(actix_files::Files::new("/uploads", "./uploads").show_files_listing())
             .service(actix_files::Files::new("/", "./templates").show_files_listing())
         //.service(web::resource("/login").route(web::post(). to(login_handler)))
