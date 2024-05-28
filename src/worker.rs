@@ -2,7 +2,7 @@ use amqprs::channel::BasicConsumeArguments;
 use amqprs::connection::{Connection, OpenConnectionArguments};
 use amqprs::callbacks;
 
-use tokio::task; // for spawning async tasks
+//use tokio::task; // for spawning async tasks
 
 async fn consume_messages_from_rabbitmq() -> Result<(), Box<dyn std::error::Error>> {
     let connection = Connection::open(&OpenConnectionArguments::new(
@@ -22,23 +22,27 @@ async fn consume_messages_from_rabbitmq() -> Result<(), Box<dyn std::error::Erro
 
     println!("[*] Waiting for messages. To exit press CTRL+C");
 
-    while let Some(message) = rx.recv().await {
-        let delivery = message.basic_properties.content.deliver.unwrap();
-        let message = String::from_utf8_lossy(&delivery.body);
+    while let Some(msg) = rx.recv().await {
+        if let Some(payload) = msg.content {
+            println!(" [x] Received {:?}", std::str::from_utf8(&payload).unwrap());
+            //channel.basic_ack(msg.deliver.delivery_tag, ).await.unwrap();
+        }
+    };
 
         // Process the message asynchronously
-        task::spawn(async move {
-            // Simulate processing delay
-            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-            println!("Processed: {}", message);
+    //     task::spawn(async move {
+    //         // Simulate processing delay
+    //         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+    //         println!("Processed: {}", message);
 
-            // Acknowledge the message
-            channel.basic_ack(delivery.delivery_tag, ).await.unwrap();
-        });
-    }
+    //         // Acknowledge the message
+    //         channel.basic_ack(delivery.delivery_tag, ).await.unwrap();
+    //     });
+    // }
 
     Ok(())
 }
+
 
 #[tokio::main]
 async fn main() {

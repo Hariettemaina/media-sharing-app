@@ -1,6 +1,6 @@
 use crate::schema::images;
 use async_graphql::futures_util::TryFutureExt;
-use async_graphql::{Context, InputObject, Object, Result, Upload};
+use async_graphql::{Context, Result, Upload};
 use chrono::{NaiveDateTime, Utc};
 use diesel::ExpressionMethods;
 use diesel_async::pooled_connection::deadpool::Pool;
@@ -13,24 +13,28 @@ use std::path::Path;
 
 use crate::{InternalError, PhotoError};
 
-#[derive(Default)]
-pub struct ImageProcessor;
-
-#[derive(InputObject)]
-pub struct ImageUploadInput {
-    image: Upload,
+pub struct ImageProcessor {
+    pool: Pool<AsyncPgConnection>,
 }
 
-#[Object]
 impl ImageProcessor {
-    async fn process_image(&self, ctx: &Context<'_>, input: ImageUploadInput) -> Result<String> {
+    pub fn new(pool: Pool<AsyncPgConnection>) -> Self {
+        Self { pool }
+    }
+
+    pub async fn process_image(
+        &self,
+        image: Upload,
+        user_id: i32,
+        ctx: &Context<'_>,
+    ) -> Result<String> {
         dotenvy::dotenv().ok();
 
         let time_now = Utc::now().naive_local();
 
         let mut image_data = Vec::new();
 
-        let mut upload_value = input.image.value(ctx).map_err(|err| {
+        let mut upload_value = image.value(ctx).map_err(|err| {
             log::error!("Failed to get image value: {}", err);
             PhotoError::Internal(InternalError::Io(std::io::Error::new(
                 std::io::ErrorKind::Other,
@@ -61,10 +65,9 @@ impl ImageProcessor {
                 })?;
 
             let filepath = format!(
-                "uploads/{}-{}.{}",
-                upload_value.filename, time_now, extension
+                "uploads/{}-{}.{}.{}",
+                upload_value.filename, time_now, extension,user_id
             );
-
             let mut file = fs::File::create(&filepath).map_err(|err| {
                 log::error!("Failed to create image file: {}", err);
                 PhotoError::Internal(InternalError::Io(err))
@@ -132,8 +135,7 @@ impl ImageProcessor {
                     })?;
             }
 
-            let pool: &Pool<AsyncPgConnection> = ctx.data()?;
-            let mut conn = pool.get().await?;
+            let mut connection = self.pool.get().await?;
 
             diesel::insert_into(images::table)
                 .values((
@@ -148,7 +150,7 @@ impl ImageProcessor {
                     images::created_at.eq(time_now),
                     images::deleted_at.eq(None::<NaiveDateTime>),
                 ))
-                .execute(&mut conn)
+                .execute(&mut connection)
                 .map_err(|e| {
                     log::error!("Failed to insert image metadata: {}", e);
                     PhotoError::DatabaseError

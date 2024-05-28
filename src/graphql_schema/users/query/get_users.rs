@@ -7,7 +7,7 @@ pub struct UserQuery;
 
 #[Object]
 impl UserQuery {
-    pub async fn get_users<'ctx>(&self, ctx: &Context<'ctx>) -> Result<Vec<User>> {
+    pub async fn get_users(&self,ctx: &Context<'_>) -> Result<Vec<User>> {
         let pool = ctx.data::<Pool<AsyncPgConnection>>()?;
         let mut connection = pool.get().await?;
 

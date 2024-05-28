@@ -23,6 +23,8 @@ pub enum PhotoError {
     DatabaseError,
     #[error("InvalidExtension")]
     InvalidExtension,
+    #[error("InvalidUserId")]
+    InvalidUserId
 }
 
 #[derive(Debug, Error)]

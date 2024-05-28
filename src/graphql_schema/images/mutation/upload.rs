@@ -227,8 +227,9 @@ async fn send_message_to_rabbitmq(message: String) -> Result<(), Box<dyn std::er
     channel
         .register_callback(callbacks::DefaultChannelCallback)
         .await?;
+     // Declare a queue
     let queue_name = "image_processing_queue";
-    // Declare an exchange
+    
 
     // Declare a queue
     let queue_args = QueueDeclareArguments::new(&queue_name);
