@@ -1,13 +1,15 @@
 use std::sync::Arc;
 
 use actix_cors::Cors;
+use actix_session::Session;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::HttpRequest;
 use actix_web::{cookie::Key, guard, http, web, web::Data, App, HttpResponse, HttpServer, Result};
-use async_graphql::{http::GraphiQLSource, EmptySubscription, Schema};
+use async_graphql::{http::GraphiQLSource, Schema};
 use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use diesel_async::pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager};
 
+use photos::graphql_schema::images::subscriptions::new_image::Subscription;
 use photos::graphql_schema::{Mutation, Query};
 
 use photos::mailer::BrevoApi;
@@ -16,7 +18,7 @@ use photos::password::PassWordHasher;
 use photos::services::image_processor::ImageProcessor;
 use photos::InternalError;
 
-pub type ApplicationSchema = Schema<Query, Mutation, EmptySubscription>;
+pub type ApplicationSchema = Schema<Query, Mutation, Subscription>;
 
 async fn index(schema: web::Data<ApplicationSchema>, req: GraphQLRequest) -> GraphQLResponse {
     schema.execute(req.into_inner()).await.into()
@@ -37,6 +39,7 @@ async fn index_ws(
     schema: web::Data<ApplicationSchema>,
     req: HttpRequest,
     payload: web::Payload,
+    session: Session
 ) -> Result<HttpResponse> {
     GraphQLSubscription::new(Schema::clone(&*schema)).start(&req, payload)
 }
@@ -59,14 +62,19 @@ async fn main() -> Result<(), InternalError> {
     let pool = Pool::builder(config).build()?;
     let image_processor = Arc::new(ImageProcessor::new(pool.clone()));
     let password_hasher = PassWordHasher::new();
-    let schema = Schema::build(Query::default(), Mutation::default(), EmptySubscription)
-        .data(pool)
-        .data(brevo_api)
-        .data(password_hasher)
-        .data(image_processor)
-        .finish();
+    let schema = Schema::build(
+        Query::default(),
+        Mutation::default(),
+        Subscription::default(),
+    )
+    .data(pool)
+    .data(brevo_api)
+    .data(password_hasher)
+    .data(image_processor)
+    .data(Subscription::default())
+    .finish();
 
-    log::info!("starting HTTP server at http://localhost:8080");
+    println!("starting HTTP server at http://localhost:8080");
 
     println!("GraphiQL IDE: http://localhost:8000");
 

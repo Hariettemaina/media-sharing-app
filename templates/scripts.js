@@ -42,9 +42,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     imgElement.style.width = '200px';
 
                     mediaGrid.appendChild(imgElement);
-                    const storedimages = JSON.parse(localStorage.getItem('uploadedimages')) || [];
+                    const storedimages = JSON.parse(sessionStorage.getItem('uploadedimages')) || [];
                     storedimages.push(imageData);
-                    localStorage.setItem('uploadedimages', JSON.stringify(storedimages));
+                    sessionStorage.setItem('uploadedimages', JSON.stringify(storedimages));
                     console.log('Stored images:', storedimages); 
 
                 } else {
@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function loadStoredImages() {
-        const storedImages = JSON.parse(localStorage.getItem('uploadedimages')) || [];
+        const storedImages = JSON.parse(sessionStorage.getItem('uploadedimages')) || [];
         console.log('Retrieved stored images:', storedImages); 
 
         storedImages.forEach(url => {
@@ -115,6 +115,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     loadImagesFromServer();
+    
 });
 
 

@@ -32,6 +32,7 @@
 // - **Expected Functionality:** RabbitMQ queues are used to manage the flow of media processing tasks. 
 //Workers consume tasks from the queue and process them asynchronously.
 
+use crate::graphql_schema::images::subscriptions::new_image::{Image, Subscription};
 use crate::schema::images;
 use crate::PhotoError;
 use amqprs::channel::{BasicPublishArguments, QueueDeclareArguments};
@@ -190,6 +191,13 @@ impl UploadMedia {
                     PhotoError::DatabaseError
                 })
                 .await?;
+        }
+
+        if let Some(sender) = ctx.data_unchecked::<Subscription>().image_sender.lock().await.as_ref() {
+            let _ = sender.send(Image {
+                url: filepath.clone(),
+                description: "Newly uploaded image".to_string(),
+            });
         }
 
         // RabbitMQ publishing logic

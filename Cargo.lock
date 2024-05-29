@@ -2612,6 +2612,7 @@ dependencies = [
  "envy",
  "ffprobe",
  "futures",
+ "futures-util",
  "handlebars 5.1.2",
  "image",
  "imageproc",
