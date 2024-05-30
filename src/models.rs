@@ -5,7 +5,7 @@ use diesel::{Insertable, Queryable, Selectable};
 use serde::Serialize;
 use uuid::Uuid;
 
-#[derive(InputObject, SimpleObject, Debug, Queryable, Selectable)]
+#[derive(InputObject, SimpleObject, Debug, Queryable, Selectable, Clone)]
 #[diesel(table_name = users)]
 pub struct User {
     pub id: i32,
@@ -54,7 +54,7 @@ pub struct NewEmailAddress {
     pub verification_code_expires_at: NaiveDateTime,
 }
 
-#[derive(SimpleObject, Queryable, Selectable, Debug, Serialize)]
+#[derive(SimpleObject, Queryable, Selectable, Debug, Serialize, Clone)]
 #[diesel(table_name = images)]
 pub struct Images {
     pub id: i32,

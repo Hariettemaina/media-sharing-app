@@ -1,38 +1,3 @@
-//upload_value
-// pub filename: String,
-// pub content_type: Option<String>,
-// pub content: File,
-
-// 2. *Media Upload*
-//    - *Description:* Allow users to upload images and videos to the platform.
-//    - *Expected Functionality:* Users can select and upload media files from their devices. Uploaded media is stored in the file system and metadata is stored in the database.
-//    - *Criteria for Completion:* Users can successfully upload images and videos. Media files are stored in the file system and metadata is stored in the database.
-//    - *Test Suites:*
-//      - Test file upload functionality.
-//      - Test database storage of metadata for uploaded media.
-// let mut img = img.resize(800, 800, image::imageops::FilterType::Nearest);
-// img = img.adjust_contrast(1.2);
-// img.save_with_format(filepath, image::ImageFormat::Jpeg, 80).unwrap();
-//let mut img = img.resize(800, 800, FilterType::Nearest);
-//img = img.adjust_contrast(1.2);
-
-// 3. *Media Optimization*
-//    - *Description:* Automatically optimize uploaded images and videos for web viewing and different viewports.
-//    - *Expected Functionality:* Upon upload, media files are processed to reduce file size while maintaining quality suitable for web viewing. Different versions of media files optimized for various viewports are generated.
-//    - *Criteria for Completion:* Uploaded media files are optimized for web viewing and different viewports.
-//    - *Test Suites:*
-//      - Test image optimization process.
-//      - Test video optimization process.
-//      - Test generation of different viewport versions.
-
-// **Backpressure Handling with RabbitMQ**
-
-// - **Description:** Integrate RabbitMQ to handle backpressure when processing media files.
-
-// - **Expected Functionality:** RabbitMQ queues are used to manage the flow of media processing tasks. 
-//Workers consume tasks from the queue and process them asynchronously.
-
-use crate::graphql_schema::images::subscriptions::new_image::{Image, Subscription};
 use crate::schema::images;
 use crate::PhotoError;
 use amqprs::channel::{BasicPublishArguments, QueueDeclareArguments};
@@ -168,7 +133,7 @@ impl UploadMedia {
                     e
                 )));
             }
-
+            
             let pool: &Pool<AsyncPgConnection> = ctx.data()?;
             let mut conn = pool.get().await?;
 
@@ -191,13 +156,6 @@ impl UploadMedia {
                     PhotoError::DatabaseError
                 })
                 .await?;
-        }
-
-        if let Some(sender) = ctx.data_unchecked::<Subscription>().image_sender.lock().await.as_ref() {
-            let _ = sender.send(Image {
-                url: filepath.clone(),
-                description: "Newly uploaded image".to_string(),
-            });
         }
 
         // RabbitMQ publishing logic
@@ -235,9 +193,8 @@ async fn send_message_to_rabbitmq(message: String) -> Result<(), Box<dyn std::er
     channel
         .register_callback(callbacks::DefaultChannelCallback)
         .await?;
-     // Declare a queue
+    // Declare a queue
     let queue_name = "image_processing_queue";
-    
 
     // Declare a queue
     let queue_args = QueueDeclareArguments::new(&queue_name);

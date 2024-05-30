@@ -24,3 +24,11 @@ pub struct Query {
     pub users: UsersQuery,
     pub images: MediaQuery
 }
+
+
+use async_graphql::MergedSubscription;
+
+#[derive(Default, MergedSubscription)]
+pub struct Subscription(
+    pub users::subscription::new_user::GetNewUser,
+);

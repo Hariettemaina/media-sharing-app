@@ -1,31 +1,23 @@
-use std::sync::Arc;
-use async_graphql::{SimpleObject, Subscription, Context};
-use async_graphql::futures_util::stream::Stream;
-use futures::stream;
-use tokio::sync::Mutex;
-use tokio::sync::broadcast;
+use async_graphql::{Context, Subscription};
+use futures_util::Stream;
 
-#[derive(SimpleObject, Clone)]
-pub struct Image {
-    pub url: String,
-    pub description: String,
-}
+use crate::{
+    models::Images,
+services::pub_sub::{get_pubsub_from_ctx, StreamResult},
+};
 
 #[derive(Default)]
-pub struct Subscription {
-    pub image_sender: Arc<Mutex<Option<broadcast::Sender<Image>>>>,
-}
+pub struct NewImageSubscription;
 
 #[Subscription]
-impl Subscription {
-    pub async fn new_image(&self,ctx: &Context<'_>) -> impl Stream<Item = Image> {
-        let (sender, receiver) = broadcast::channel(100);
-        *self.image_sender.lock().await = Some(sender);
-        stream::unfold(receiver, |mut receiver| async {
-            match receiver.recv().await {
-                Ok(image) => Some((image, receiver)),
-                Err(_) => None,
-            }
-        })
+impl NewImageSubscription {
+    pub async fn new_image<'a>(
+        &'a self,
+        ctx: &'a Context<'a>,
+        channel: String,
+    ) -> impl Stream<Item = StreamResult<Images>> + 'a {
+        let mut pub_sub = get_pubsub_from_ctx::<Images>(ctx).await.unwrap();
+
+        pub_sub.subscribe(channel).await
     }
 }

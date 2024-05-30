@@ -1,5 +1,6 @@
 use crate::mailer::BrevoApi;
 use crate::models::NewEmailAddress;
+use crate::services::pub_sub::get_pubsub_from_ctx;
 use crate::{
     error::PhotoError,
     models::{NewUser, User},
@@ -110,6 +111,10 @@ impl AddUser {
                 PhotoError::UserAccountAlreadyExists
             })?;
 
+            let pub_sub = get_pubsub_from_ctx::<User>(ctx).await?;
+            let pub_sub_lock = pub_sub.write().unwrap();
+            pub_sub_lock.publish(created_user.clone());
+    
         Ok(created_user)
     }
 }
