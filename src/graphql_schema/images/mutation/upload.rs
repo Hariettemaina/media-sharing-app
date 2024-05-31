@@ -1,4 +1,5 @@
 use crate::schema::images;
+
 use crate::PhotoError;
 use amqprs::channel::{BasicPublishArguments, QueueDeclareArguments};
 use amqprs::connection::{Connection, OpenConnectionArguments};
@@ -18,6 +19,8 @@ use uuid::Uuid;
 
 #[derive(Default)]
 pub struct UploadMedia;
+
+
 
 #[derive(InputObject)]
 pub struct UploadUserInput {
@@ -133,7 +136,7 @@ impl UploadMedia {
                     e
                 )));
             }
-            
+
             let pool: &Pool<AsyncPgConnection> = ctx.data()?;
             let mut conn = pool.get().await?;
 
@@ -158,6 +161,9 @@ impl UploadMedia {
                 .await?;
         }
 
+        
+        
+        
         // RabbitMQ publishing logic
         let message = format!(
             "Image uploaded: {}\nPath: {}\nFormat: {}\nSize: {} bytes\nDimensions: {}x{}",

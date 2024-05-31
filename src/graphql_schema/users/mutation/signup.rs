@@ -1,6 +1,5 @@
 use crate::mailer::BrevoApi;
 use crate::models::NewEmailAddress;
-use crate::services::pub_sub::get_pubsub_from_ctx;
 use crate::{
     error::PhotoError,
     models::{NewUser, User},
@@ -9,7 +8,9 @@ use crate::{
 use async_graphql::{Context, InputObject, Object, Result};
 use chrono::{Duration, NaiveDate, Utc};
 use diesel_async::{pooled_connection::deadpool::Pool, AsyncPgConnection, RunQueryDsl};
+use tokio::sync::{broadcast, Mutex};
 use std::env;
+use async_std::sync::Arc;
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
@@ -110,11 +111,14 @@ impl AddUser {
                 log::error!("Failed to register user: {}", e);
                 PhotoError::UserAccountAlreadyExists
             })?;
+        let tx = ctx.data::<Arc<Mutex<broadcast::Sender<User>>>>().unwrap();
+        let tx = tx.lock().await;
+        if let Err(e) = tx.send(created_user.clone()) {
+            log::error!("failed to send message:  {}", e);
+        }
+        
+        
 
-            let pub_sub = get_pubsub_from_ctx::<User>(ctx).await?;
-            let pub_sub_lock = pub_sub.write().unwrap();
-            pub_sub_lock.publish(created_user.clone());
-    
         Ok(created_user)
     }
 }

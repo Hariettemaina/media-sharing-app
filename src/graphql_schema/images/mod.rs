@@ -1,3 +1,3 @@
 pub mod mutation;
 pub mod query;
-//pub mod subscriptions;
+pub mod subscriptions;
