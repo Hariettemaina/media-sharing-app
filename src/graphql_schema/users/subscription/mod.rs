@@ -1,9 +1,9 @@
-use async_graphql::MergedSubscription;
+// use async_graphql::MergedSubscription;
 
 
-use new_user::GetNewUser;
-pub mod new_user;
+// use new_user::GetNewUser;
+// pub mod new_user;
 
 
-#[derive(MergedSubscription, Default)]
-pub struct Subscription(GetNewUser);
+// #[derive(MergedSubscription, Default)]
+// pub struct Subscription(GetNewUser);

@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     const uploadForm = document.getElementById('upload-form');
     const fileInput = document.getElementById('file-input');
-    const mediaGrid = document.querySelector('.media-grid'); 
+    const mediaGrid = document.querySelector('.media-grid');
 
     uploadForm.addEventListener('submit', function (event) {
         event.preventDefault();
@@ -42,10 +42,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     imgElement.style.width = '200px';
 
                     mediaGrid.appendChild(imgElement);
-                    const storedimages = JSON.parse(sessionStorage.getItem('uploadedimages')) || [];
-                    storedimages.push(imageData);
-                    sessionStorage.setItem('uploadedimages', JSON.stringify(storedimages));
-                    console.log('Stored images:', storedimages); 
+                    const storedImages = JSON.parse(sessionStorage.getItem('uploadedimages')) || [];
+                    storedImages.push(imageData);
+                    sessionStorage.setItem('uploadedimages', JSON.stringify(storedImages));
+                    console.log('Stored images:', storedImages);
 
                 } else {
                     console.error('Upload failed', data);
@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function loadStoredImages() {
         const storedImages = JSON.parse(sessionStorage.getItem('uploadedimages')) || [];
-        console.log('Retrieved stored images:', storedImages); 
+        console.log('Retrieved stored images:', storedImages);
 
         storedImages.forEach(url => {
             const imageElement = document.createElement('img');
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    loadStoredImages(); 
+    loadStoredImages();
     function loadImagesFromServer() {
         fetchImagesFromServer().then(images => {
             images.forEach(imageData => {
@@ -103,8 +103,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const data = await response.json();
 
-            if (data.data && Array.isArray(data.data.images)) {
-                return data.data.images;
+            if (data.data && Array.isArray(data.data.images.getImages)) {
+                return data.data.images.getImages;
             } else {
                 throw new Error('No images found');
             }
@@ -115,7 +115,30 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     loadImagesFromServer();
-    
+
+    // WebSocket connection
+    const socket = new WebSocket('ws://localhost:8000');
+
+    socket.addEventListener('open', function (event) {
+        console.log('WebSocket connection established');
+    });
+
+    socket.addEventListener('message', function (event) {
+        console.log('Message from server:', event.data);
+        const data = JSON.parse(event.data);
+        const imgElement = document.createElement('img');
+        imgElement.src = data.message;
+        imgElement.style.width = '200px';
+        mediaGrid.appendChild(imgElement);
+    });
+
+    socket.addEventListener('close', function (event) {
+        console.log('WebSocket connection closed');
+    });
+
+    socket.addEventListener('error', function (event) {
+        console.error('WebSocket error:', event);
+    });
 });
 
 

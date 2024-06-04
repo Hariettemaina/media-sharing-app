@@ -7,11 +7,13 @@ use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse, GraphQLSubscripti
 use async_graphql::{http::GraphiQLSource, Schema};
 use diesel_async::pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager};
 use graphql_schema::{Mutation, Query, Subscription};
+use photos::graphql_schema::images::subscriptions::new_image::MediaUpdate;
 use photos::mailer::BrevoApi;
-use photos::models::User;
+// use photos::models::User;
 use photos::password::PassWordHasher;
 use photos::services::image_processor::ImageProcessor;
 use photos::{graphql_schema, InternalError};
+
 use tokio::sync::{broadcast, Mutex};
 pub type ApplicationSchema = Schema<Query, Mutation, Subscription>;
 
@@ -52,9 +54,10 @@ async fn main() -> Result<(), InternalError> {
     let brevo_api = BrevoApi::new(api_key, email);
 
     let database_url = dotenvy::var("DATABASE_URL").unwrap();
-    let (tx, _) = broadcast::channel::<User>(500);
+    // let (tx, _) = broadcast::channel::<User>(100);
     let secret_key = Key::generate();
-    
+    let (tx, _) = broadcast::channel::<MediaUpdate>(100);
+
     let config = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(database_url);
     let pool = Pool::builder(config).build()?;
     let image_processor = Arc::new(ImageProcessor::new(pool.clone()));
@@ -98,7 +101,7 @@ async fn main() -> Result<(), InternalError> {
                     .to(index_ws),
             )
             .service(
-                web::resource("/")
+                web::resource("/graphiql")
                     .guard(guard::Get())
                     .to(index_graphiql),
             )

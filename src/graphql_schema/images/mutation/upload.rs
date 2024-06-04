@@ -1,5 +1,5 @@
+use crate::graphql_schema::images::subscriptions::new_image::MediaUpdate;
 use crate::schema::images;
-
 use crate::PhotoError;
 use amqprs::channel::{BasicPublishArguments, QueueDeclareArguments};
 use amqprs::connection::{Connection, OpenConnectionArguments};
@@ -15,12 +15,12 @@ use image::{imageops::FilterType, GenericImageView};
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::Path;
+use tokio::sync::broadcast;
 use uuid::Uuid;
 
 #[derive(Default)]
+
 pub struct UploadMedia;
-
-
 
 #[derive(InputObject)]
 pub struct UploadUserInput {
@@ -160,10 +160,13 @@ impl UploadMedia {
                 })
                 .await?;
         }
+        let (tx, _) = broadcast::channel::<MediaUpdate>(100);
+        tx.send(MediaUpdate {
+            message: "New media uploaded!".to_string(),
+            user_id: input.user_id,
+        })
+        .unwrap();
 
-        
-        
-        
         // RabbitMQ publishing logic
         let message = format!(
             "Image uploaded: {}\nPath: {}\nFormat: {}\nSize: {} bytes\nDimensions: {}x{}",
