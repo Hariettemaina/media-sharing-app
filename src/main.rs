@@ -57,6 +57,7 @@ async fn main() -> Result<(), InternalError> {
     // let (tx, _) = broadcast::channel::<User>(100);
     let secret_key = Key::generate();
     let (tx, _) = broadcast::channel::<MediaUpdate>(100);
+    let tx = Arc::new(Mutex::new(tx));
 
     let config = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(database_url);
     let pool = Pool::builder(config).build()?;
@@ -71,7 +72,7 @@ async fn main() -> Result<(), InternalError> {
     .data(brevo_api)
     .data(password_hasher)
     .data(image_processor)
-    .data(Arc::new(Mutex::new(tx.clone())))
+    .data(tx.clone())
     .finish();
 
     println!("starting HTTP server at http://localhost:8080");

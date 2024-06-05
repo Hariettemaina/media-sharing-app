@@ -3,8 +3,52 @@ document.addEventListener('DOMContentLoaded', function () {
     const fileInput = document.getElementById('file-input');
     const mediaGrid = document.querySelector('.media-grid');
 
-    uploadForm.addEventListener('submit', function (event) {
+    let websocket;
+
+    function initWebSocket() {
+        websocket = new WebSocket('ws://localhost:8080');
+
+        websocket.onopen = function () {
+            console.log('WebSocket connection established');
+        };
+
+        websocket.onmessage = function (event) {
+            const message = JSON.parse(event.data);
+            handleWebSocketMessage(message);
+        };
+
+
+        websocket.onclose = function () {
+            console.log('WebSocket connection closed');
+        };
+
+
+        websocket.onerror = function (error) {
+            console.error('WebSocket error:', error);
+        };
+    }
+
+    // Handle a WebSocket message
+    function handleWebSocketMessage(message) {
+        // Check the type of the message and take appropriate action
+        if (message.type === 'uploadStatus') {
+            console.log('Upload status:', message.data);
+        } else if (message.type === 'newImage') {
+            appendImageToGrid(message.data.imageUrl);
+            storeImageInSession(message.data.imageUrl);
+        }
+    }
+
+
+    uploadForm.addEventListener('submit', async function (event) {
         event.preventDefault();
+
+        // Check if a file is selected
+        if (!fileInput.files.length) {
+            alert('Please select a file to upload.');
+            return;
+        }
+
 
         const formData = new FormData();
         formData.append('operations', JSON.stringify({
@@ -27,119 +71,67 @@ document.addEventListener('DOMContentLoaded', function () {
         }));
         formData.append('0', fileInput.files[0]);
 
-        fetch('http://localhost:8000', {
-            method: 'POST',
-            body: formData,
-        })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Full response;', data);
-                if (data.data && data.data.images.upload) {
-                    const imageData = data.data.images.upload;
-
-                    const imgElement = document.createElement('img');
-                    imgElement.src = imageData;
-                    imgElement.style.width = '200px';
-
-                    mediaGrid.appendChild(imgElement);
-                    const storedImages = JSON.parse(sessionStorage.getItem('uploadedimages')) || [];
-                    storedImages.push(imageData);
-                    sessionStorage.setItem('uploadedimages', JSON.stringify(storedImages));
-                    console.log('Stored images:', storedImages);
-
-                } else {
-                    console.error('Upload failed', data);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
+        try {
+            // Send a POST request to the server with the form data
+            const response = await fetch('http://localhost:8080', {
+                method: 'POST',
+                body: formData,
             });
+            const data = await response.json();
+            console.log('Full response:', data);
+
+            // Check if the upload was successful
+            if (data.errors) {
+                console.error('Upload failed:', data.errors);
+                alert('Upload failed. Please try again.');
+            } else if (data.data && data.data.images.upload) {
+                const imageData = data.data.images.upload;
+
+                // Append the image to the grid
+                appendImageToGrid(imageData);
+                // Store the image in the session
+                storeImageInSession(imageData);
+                // Send a WebSocket message with the image data
+                if (websocket.readyState === WebSocket.OPEN) {
+                    websocket.send(JSON.stringify({ type: 'newUpload', data: imageData }));
+                } else {
+                    console.error('WebSocket connection not open');
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error uploading the file. Please try again.');
+        }
     });
+
 
     function loadStoredImages() {
         const storedImages = JSON.parse(sessionStorage.getItem('uploadedimages')) || [];
         console.log('Retrieved stored images:', storedImages);
 
-        storedImages.forEach(url => {
-            const imageElement = document.createElement('img');
-            imageElement.src = url;
-            imageElement.style.width = '200px';
-            mediaGrid.appendChild(imageElement);
-        });
+        storedImages.forEach(appendImageToGrid);
     }
 
-    loadStoredImages();
-    function loadImagesFromServer() {
-        fetchImagesFromServer().then(images => {
-            images.forEach(imageData => {
-                const imgElement = document.createElement('img');
-                imgElement.src = imageData;
-                imgElement.style.width = '200px';
-                mediaGrid.appendChild(imgElement);
-            });
-        }).catch(error => {
-            console.error('Error fetching images:', error);
-        });
-    }
 
-    async function fetchImagesFromServer() {
-        try {
-            const response = await fetch('http://localhost:8000', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                },
-                body: JSON.stringify({
-                    query: `
-                        query GetImages {
-                            images {
-                                getImages 
-                            }
-                        }
-                    `
-                }),
-            });
-
-            const data = await response.json();
-
-            if (data.data && Array.isArray(data.data.images.getImages)) {
-                return data.data.images.getImages;
-            } else {
-                throw new Error('No images found');
-            }
-        } catch (error) {
-            console.error('Error fetching images:', error);
-            throw error;
-        }
-    }
-
-    loadImagesFromServer();
-
-    // WebSocket connection
-    const socket = new WebSocket('ws://localhost:8000');
-
-    socket.addEventListener('open', function (event) {
-        console.log('WebSocket connection established');
-    });
-
-    socket.addEventListener('message', function (event) {
-        console.log('Message from server:', event.data);
-        const data = JSON.parse(event.data);
+    function appendImageToGrid(imageUrl) {
         const imgElement = document.createElement('img');
-        imgElement.src = data.message;
+        imgElement.src = imageUrl;
         imgElement.style.width = '200px';
         mediaGrid.appendChild(imgElement);
-    });
+    }
 
-    socket.addEventListener('close', function (event) {
-        console.log('WebSocket connection closed');
-    });
+    function storeImageInSession(imageUrl) {
+        const storedImages = JSON.parse(sessionStorage.getItem('uploadedimages')) || [];
+        storedImages.push(imageUrl);
+        sessionStorage.setItem('uploadedimages', JSON.stringify(storedImages));
+        console.log('Stored images:', storedImages);
+    }
 
-    socket.addEventListener('error', function (event) {
-        console.error('WebSocket error:', event);
-    });
+
+    initWebSocket();
+    loadStoredImages();
 });
+
 
 
 
@@ -191,108 +183,3 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
-
-// document.addEventListener('DOMContentLoaded', function () {
-//     const uploadForm = document.getElementById('upload-form');
-//     const fileInput = document.getElementById('file-input');
-//     const mediaGrid = document.querySelector('.media-grid');
-
-//     uploadForm.addEventListener('submit', function (event) {
-//         event.preventDefault();
-
-//         const formData = new FormData();
-//         formData.append('operations', JSON.stringify({
-//             query: `
-//                 mutation UploadFile($input: UploadUserInput!) {
-//                     images {
-//                         upload(input: $input)
-//                     }
-//                 }
-//             `,
-//             variables: {
-//                 input: {
-//                     image: null,
-//                     userId: 1
-//                 }
-//             }
-//         }));
-//         formData.append('map', JSON.stringify({
-//             '0': ['variables.input.image']
-//         }));
-//         formData.append('0', fileInput.files[0]);
-
-//         fetch('http://localhost:8000', {
-//             method: 'POST',
-//             body: formData,
-//         })
-//            .then(response => response.json())
-//            .then(data => {
-//                 console.log('Full response;', data);
-//                 if (data.data && data.data.images.upload) {
-//                     const imageData = data.data.images.upload;
-
-//                     const imgElement = document.createElement('img');
-//                     imgElement.src = imageData;
-//                     imgElement.style.width = '200px';
-
-//                     mediaGrid.appendChild(imgElement);
-//                 } else {
-//                     console.error('Upload failed', data);
-//                 }
-//             })
-//            .catch(error => {
-//                 console.error('Error:', error);
-//             });
-//     });
-
-//     function loadImagesFromServer(userId) {
-//         fetchImagesFromServer(userId).then(images => {
-//             images.forEach(imageData => {
-//                 const imgElement = document.createElement('img');
-//                 imgElement.src = imageData;
-//                 imgElement.style.width = '200px';
-//                 mediaGrid.appendChild(imgElement);
-//             });
-//         }).catch(error => {
-//             console.error('Error fetching images:', error);
-//         });
-//     }
-
-//     async function fetchImagesFromServer(userId) {
-//         try {
-//             const response = await fetch('http://localhost:8000', {
-//                 method: 'POST',
-//                 headers: {
-//                     'Content-Type': 'application/json',
-//                     'Accept': 'application/json',
-//                 },
-//                 body: JSON.stringify({
-//                     query: `
-//                         query GetImages($userId: Int!) {
-//                             images(userId: $userId) {
-//                                 getImages 
-//                             }
-//                         }
-//                     `,
-//                     variables: {
-//                         userId: userId
-//                     }
-//                 }),
-//             });
-
-//             const data = await response.json();
-
-//             if (data.data && Array.isArray(data.data.images)) {
-//                 return data.data.images;
-//             } else {
-//                 throw new Error('No images found');
-//             }
-//         } catch (error) {
-//             console.error('Error fetching images:', error);
-//             throw error;
-//         }
-//     }
-
-//     // Example usage: Load images for a specific user
-//     loadImagesFromServer(1); // Replace 1 with the actual user ID
-// });
