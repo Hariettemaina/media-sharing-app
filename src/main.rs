@@ -9,7 +9,7 @@ use diesel_async::pooled_connection::{deadpool::Pool, AsyncDieselConnectionManag
 use graphql_schema::{Mutation, Query, Subscription};
 use photos::graphql_schema::images::subscriptions::new_image::MediaUpdate;
 use photos::mailer::BrevoApi;
-// use photos::models::User;
+use photos::models::Images;
 use photos::password::PassWordHasher;
 use photos::services::image_processor::ImageProcessor;
 use photos::{graphql_schema, InternalError};
@@ -40,6 +40,7 @@ async fn index_ws(
     req: HttpRequest,
     payload: web::Payload,
 ) -> Result<HttpResponse> {
+    println!("Websocket...");
     GraphQLSubscription::new(Schema::clone(&*schema)).start(&req, payload)
 }
 
@@ -84,8 +85,17 @@ async fn main() -> Result<(), InternalError> {
             .allowed_origin("http://localhost:8080")
             .allowed_origin_fn(|origin, _req_head| origin.as_bytes().ends_with(b".rust-lang.org"))
             .allowed_methods(vec!["GET", "POST"])
-            .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
+            .allowed_headers(vec![
+                http::header::AUTHORIZATION,
+                http::header::ACCEPT,
+                http::header::UPGRADE,
+                http::header::CONNECTION,
+                http::header::SEC_WEBSOCKET_VERSION,
+                http::header::SEC_WEBSOCKET_KEY,
+                http::header::SEC_WEBSOCKET_EXTENSIONS,
+            ])
             .allowed_header(http::header::CONTENT_TYPE)
+            .supports_credentials()
             .max_age(3600);
         App::new()
             .wrap(SessionMiddleware::new(

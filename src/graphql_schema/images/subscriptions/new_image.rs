@@ -1,5 +1,4 @@
 use async_graphql::{
-    futures_util::stream::{Stream, StreamExt},
     Context, SimpleObject, Subscription,
 };
 use std::sync::Arc;
@@ -16,17 +15,18 @@ pub struct MediaUpdate {
 pub struct GetNewImage;
 
 #[Subscription]
-impl GetNewImage {
-    pub async fn media_updates(&self, ctx: &Context<'_>) -> impl Stream<Item = MediaUpdate> {
-        let tx = ctx
-            .data::<Arc<Mutex<broadcast::Sender<MediaUpdate>>>>()
-            .unwrap();
-        let tx = tx.lock().await;
-
-        tokio_stream::wrappers::BroadcastStream::new(tx.subscribe()).map(|result| result.unwrap())
+impl GetNewImage  {
+    async fn media_updates(&self, ctx: &Context<'_>) -> impl futures_util::Stream<Item = MediaUpdate> {
+        let tx = ctx.data_unchecked::<Arc<Mutex<broadcast::Sender<MediaUpdate>>>>().clone();
+        let rx = tx.lock().await.subscribe();
+        futures_util::stream::unfold(rx, |mut rx| async {
+            match rx.recv().await {
+                Ok(msg) => Some((msg, rx)),
+                Err(_) => None,
+            }
+        })
     }
 }
-
 
 
 
@@ -38,3 +38,16 @@ impl GetNewImage {
 // message: "New image uploaded".to_string(),
 // };
 // tx.lock().await.send(update).unwrap();
+
+
+// impl GetNewImage {
+//     pub async fn media_updates(&self, ctx: &Context<'_>) -> impl Stream<Item = MediaUpdate> {
+//         let tx = ctx
+//             .data::<Arc<Mutex<broadcast::Sender<MediaUpdate>>>>()
+//             .unwrap();
+//         let tx = tx.lock().await;
+
+//         tokio_stream::wrappers::BroadcastStream::new(tx.subscribe()).map(|result| result.unwrap())
+//     }
+// }
+

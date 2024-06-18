@@ -15,8 +15,9 @@ use image::{imageops::FilterType, GenericImageView};
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::Path;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, Mutex};
 use uuid::Uuid;
+use async_std::sync::Arc;
 
 #[derive(Default)]
 
@@ -143,13 +144,13 @@ impl UploadMedia {
             diesel::insert_into(images::table)
                 .values((
                     images::name.eq(filename.clone()),
-                    images::file_path.eq(&resized_filepath),
+                    images::file_path.eq(&filepath),
                     images::description.eq(Some("Resized image".to_string())),
                     images::exif_data.eq(None::<String>),
                     images::format.eq(image_format_str),
                     images::size.eq(image_data.len() as i32),
-                    images::width.eq(resized_img.width() as i32),
-                    images::height.eq(resized_img.height() as i32),
+                    images::width.eq(width as i32),
+                    images::height.eq(width as i32),
                     images::created_at.eq(time_now),
                     images::deleted_at.eq(None::<NaiveDateTime>),
                 ))
@@ -181,6 +182,23 @@ impl UploadMedia {
             width,
             height
         );
+        
+
+        let tx = ctx.data_unchecked::<Arc<Mutex<broadcast::Sender<MediaUpdate>>>>().clone();
+        let tx = tx.lock().await;
+        let mut rx = tx.subscribe();
+        if tx.send(MediaUpdate {user_id:input.user_id, message: message.clone() }) .is_err() {
+            log::error!("Failed to send message");
+        }
+        rx.recv().await.unwrap();
+        // let (tx, _) = broadcast::channel::<MediaUpdate>(100);
+        // let mut rx = tx.subscribe();
+        
+        // match tx.send(MediaUpdate {user_id:input.user_id, message: message.clone() }) {
+        //     Ok(_) => println!("Message sent successfully"),
+        //     Err(e) => println!("Failed to send message: {:?}", e),
+        // }
+        // rx.recv().await.unwrap();
 
         send_message_to_rabbitmq(message).await.unwrap();
 
@@ -221,7 +239,7 @@ async fn send_message_to_rabbitmq(message: String) -> Result<(), Box<dyn std::er
     channel
         .basic_publish(props, message.into_bytes(), publish_args)
         .await?;
-    println!(" [x] Sent \"Hello World!\"");
+    println!("  Sent \"Hello World!\"");
     channel.close().await?;
     connection.close().await?;
     Ok(())
