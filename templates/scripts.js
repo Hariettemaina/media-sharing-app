@@ -35,6 +35,10 @@ document.addEventListener('DOMContentLoaded', function () {
         };
     }
 
+
+    // The subscription query listens for mediaUpdates events.
+    // The subscription ID is set to '1'.
+
     function handleWebSocketMessage(message) {
         console.log('Handling WebSocket message:', message); // Log the message for debugging
         if (message.type === 'data' && message.id === '1') {

@@ -17,6 +17,7 @@
                 <li><a href="#">Logout</a></li>
             </ul>
         </nav>
+        <div id="welcome-message"></div>
     </header>
 
     <main>
@@ -44,5 +45,13 @@
     </footer>
 
     <script src="scripts.js"></script>
+    <script>
+        document.addEventListener('DOMContetLoaded', function (){
+            const userName = sessionStorage.getItem('userName');
+            if (userName) {
+                document.getElementById('welcome-message').innerText = 'Welcome, ${userName}'
+            }
+        });
+    </script>
 </body>
 </html>
