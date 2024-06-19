@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Media Sharing Dashboard</title>
     <!-- <script src="video.js"></script> -->
-    <link rel="stylesheet" href="dash.css">
+    <link rel="stylesheet" href="dash.css" />
 </head>
+
 <body>
     <header>
         <nav>
@@ -21,12 +23,10 @@
     </header>
 
     <main>
-        
-
         <section id="upload-section">
             <h2>Upload Media</h2>
             <form id="upload-form" action="/upload" method="post" enctype="multipart/form-data">
-                <input id="file-input" type="file" name="media" accept="image/*" required>
+                <input id="file-input" type="file" name="media" accept="image/*" required />
                 <button type="submit">Upload</button>
             </form>
         </section>
@@ -35,7 +35,6 @@
             <h2>Your Media</h2>
             <div class="media-grid">
                 <img id="uploadedImage" width="200" />
-
             </div>
         </section>
     </main>
@@ -46,12 +45,22 @@
 
     <script src="scripts.js"></script>
     <script>
-        document.addEventListener('DOMContetLoaded', function (){
-            const userName = sessionStorage.getItem('userName');
-            if (userName) {
-                document.getElementById('welcome-message').innerText = 'Welcome, ${userName}'
+        document.addEventListener("DOMContentLoaded", function () {
+            const userId = sessionStorage.getItem("userId");
+            const userName = sessionStorage.getItem("userName");
+
+            console.log("Retrieved userId:", userId); // Debugging line
+            console.log("Retrieved userName:", userName); // Debugging line
+
+            if (!userId) {
+                window.location.href = "login.html";
+            } else {
+                document.getElementById(
+                    "welcome-message"
+                ).innerText = `Welcome, ${userName}`;
             }
         });
     </script>
 </body>
+
 </html>
