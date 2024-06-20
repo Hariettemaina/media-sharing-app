@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let registrationForm = document.getElementById('registrationForm');
     registrationForm.addEventListener('submit', function (event) {
         event.preventDefault(); // Prevent the default form submission
-        const socket = new WebSocket('ws://localhost:8000');
+        const socket = new WebSocket('ws://localhost:8080', 'graphql-ws');
 
         socket.addEventListener('open',(event)=>{
             console.log('Connected', event);
