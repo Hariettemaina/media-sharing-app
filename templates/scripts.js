@@ -35,10 +35,6 @@ document.addEventListener('DOMContentLoaded', function () {
         };
     }
 
-
-    // The subscription query listens for mediaUpdates events.
-    // The subscription ID is set to '1'.
-
     function handleWebSocketMessage(message) {
         console.log('Handling WebSocket message:', message); // Log the message for debugging
         if (message.type === 'data' && message.id === '1') {
@@ -81,6 +77,12 @@ document.addEventListener('DOMContentLoaded', function () {
     uploadForm.addEventListener('submit', async function (event) {
         event.preventDefault();
 
+        const userId = sessionStorage.getItem("userId");
+        if (!userId) {
+            alert('Please login first');
+            return;
+        }
+
         if (!fileInput.files.length) {
             alert('Please select a file to upload.');
             return;
@@ -98,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function () {
             variables: {
                 input: {
                     image: null,
-                    userId: 1
+                    userId: parseInt(userId)
                 }
             }
         }));

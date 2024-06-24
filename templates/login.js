@@ -19,8 +19,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const variables = {
             input: {
-                userEmail: document.getElementById('Email').value,
-                password: document.getElementById('loginPassword').value,
+                userEmail,
+                password
             }
         };
 
@@ -42,11 +42,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     alert('Login failed. Please try again.');
                 } else {
                     alert('Login successful!');
-                    console.log('Login successful:', data.data.users.login); // Debugging line
                     const user = data.data.users.login;
-                    console.log('User:', user); // Debugging line
                     sessionStorage.setItem('userId', user.id);
-                    sessionStorage.setItem('userName', user.userName);
+                    sessionStorage.setItem('userName', user.username);
                     window.location.href = 'dashboard.html';
                 }
             })

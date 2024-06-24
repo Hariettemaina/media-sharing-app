@@ -161,16 +161,16 @@ impl UploadMedia {
                 })
                 .await?;
         }
-        let (tx, _) = broadcast::channel::<MediaUpdate>(100);
-        let mut rx = tx.subscribe();
-        match tx.send(MediaUpdate {
-            message: "New media uploaded!".to_string(),
-            user_id: input.user_id,
-        }) {
-            Ok(_) => println!("Message sent successfully"),
-            Err(e) => println!("Failed to send message: {:?}", e),
-        }
-        rx.recv().await.unwrap();
+        // let (tx, _) = broadcast::channel::<MediaUpdate>(100);
+        // let mut rx = tx.subscribe();
+        // match tx.send(MediaUpdate {
+        //     message: "New media uploaded!".to_string(),
+        //     user_id: input.user_id,
+        // }) {
+        //     Ok(_) => println!("Message sent successfully"),
+        //     Err(e) => println!("Failed to send message: {:?}", e),
+        // }
+        // rx.recv().await.unwrap();
 
         // RabbitMQ publishing logic
         let message = format!(

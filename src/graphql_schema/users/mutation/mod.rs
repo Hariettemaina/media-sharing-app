@@ -1,5 +1,6 @@
 pub mod login;
 pub mod signup;
+pub mod update;
 
 pub mod verify_email;
 
