@@ -1,11 +1,11 @@
 use crate::schema::{email_address, images, users, videos};
 use async_graphql::{InputObject, SimpleObject};
 use chrono::{NaiveDate, NaiveDateTime};
-use diesel::{Insertable, Queryable, Selectable};
+use diesel::{query_builder::AsChangeset, Insertable, Queryable, Selectable};
 use serde::Serialize;
 use uuid::Uuid;
 
-#[derive(InputObject, SimpleObject, Debug, Queryable, Selectable, Clone)]
+#[derive(InputObject, SimpleObject, Debug, Queryable, Selectable, Clone, AsChangeset)]
 #[diesel(table_name = users)]
 pub struct User {
     pub id: i32,

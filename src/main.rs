@@ -9,7 +9,7 @@ use diesel_async::pooled_connection::{deadpool::Pool, AsyncDieselConnectionManag
 use graphql_schema::{Mutation, Query, Subscription};
 use photos::graphql_schema::images::subscriptions::new_image::MediaUpdate;
 use photos::mailer::BrevoApi;
-use photos::models::Images;
+// use photos::models::Images;
 use photos::password::PassWordHasher;
 use photos::services::image_processor::ImageProcessor;
 use photos::{graphql_schema, InternalError};
@@ -93,8 +93,9 @@ async fn main() -> Result<(), InternalError> {
                 http::header::SEC_WEBSOCKET_VERSION,
                 http::header::SEC_WEBSOCKET_KEY,
                 http::header::SEC_WEBSOCKET_EXTENSIONS,
+                http::header::CONTENT_TYPE
             ])
-            .allowed_header(http::header::CONTENT_TYPE)
+            // .allowed_header(http::header::CONTENT_TYPE)
             .supports_credentials()
             .max_age(3600);
         App::new()

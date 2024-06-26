@@ -15,13 +15,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 payload: {}
             };
             websocket.send(JSON.stringify(payload));
-
-            // Start subscription only after the connection is open
             startSubscription();
         };
 
         websocket.onmessage = function (event) {
-            console.log('WebSocket message received:', event.data); // Log received message for debugging
+            console.log('WebSocket message received:', event.data);
             const message = JSON.parse(event.data);
             handleWebSocketMessage(message);
         };
@@ -36,18 +34,17 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function handleWebSocketMessage(message) {
-        console.log('Handling WebSocket message:', message); // Log the message for debugging
+        console.log('Handling WebSocket message:', message);
         if (message.type === 'data' && message.id === '1') {
             const mediaUpdate = message.payload.data.mediaUpdates;
             const imageUrl = extractImageUrl(mediaUpdate.message);
             appendImageToGrid(imageUrl);
-        } else if (message.type === 'notification' && message.id === 'new_upload') {
-            alert(`New image uploaded by user ${message.payload.data.userId}`);
+
+            alert('New image uploaded successfully!');
         }
     }
 
     function extractImageUrl(message) {
-        // Extract the image URL from the message
         const matches = message.match(/Path: (.+?) /);
         if (matches && matches[1]) {
             return `http://localhost:8080/${matches[1].trim()}`;
@@ -151,7 +148,6 @@ document.addEventListener('DOMContentLoaded', function () {
     initWebSocket();
     loadStoredImages();
 });
-
 
 
 
