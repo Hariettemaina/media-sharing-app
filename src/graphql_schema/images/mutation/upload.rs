@@ -91,6 +91,7 @@ impl UploadMedia {
         };
 
         let (width, height) = img.dimensions();
+        log::info!("Height:{}, Width:{}",height,width);
 
         // Define the target widths for each viewport category
         let target_widths = [
@@ -171,6 +172,8 @@ impl UploadMedia {
         //     Err(e) => println!("Failed to send message: {:?}", e),
         // }
         // rx.recv().await.unwrap();
+        log::info!("Height1:{}, Width1:{}",height,width);
+
 
         // RabbitMQ publishing logic
         let message = format!(

@@ -1,14 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Media Sharing Dashboard</title>
-    <!-- <script src="video.js"></script> -->
     <link rel="stylesheet" href="dash.css" />
 </head>
-
 <body>
     <header>
         <nav>
@@ -33,9 +30,7 @@
 
         <section id="media-section">
             <h2>Your Media</h2>
-            <div class="media-grid">
-                <img id="uploadedImage" width="200" />
-            </div>
+            <div class="media-grid"></div>
         </section>
     </main>
 
@@ -55,12 +50,9 @@
             if (!userId) {
                 window.location.href = "login.html";
             } else {
-                document.getElementById(
-                    "welcome-message"
-                ).innerText = `Welcome, ${userName}`;
+                document.getElementById("welcome-message").innerText = `Welcome, ${userName}`;
             }
         });
     </script>
 </body>
-
 </html>

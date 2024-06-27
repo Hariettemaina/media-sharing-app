@@ -134,7 +134,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (imageUrl) {
             const imgElement = document.createElement('img');
             imgElement.src = imageUrl;
-            imgElement.style.width = '200px';
+            imgElement.style.width = '100%';
+            imgElement.style.height = 'auto';
             mediaGrid.appendChild(imgElement);
         }
     }

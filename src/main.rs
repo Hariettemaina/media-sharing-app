@@ -1,14 +1,14 @@
-use std::sync::Arc;
 use actix_cors::Cors;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::HttpRequest;
 use actix_web::{cookie::Key, guard, http, web, web::Data, App, HttpResponse, HttpServer, Result};
-use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use async_graphql::{http::GraphiQLSource, Schema};
+use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use diesel_async::pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager};
 use graphql_schema::{Mutation, Query, Subscription};
 use photos::graphql_schema::images::subscriptions::new_image::MediaUpdate;
 use photos::mailer::BrevoApi;
+use std::sync::Arc;
 // use photos::models::Images;
 use photos::password::PassWordHasher;
 use photos::services::image_processor::ImageProcessor;
@@ -16,9 +16,6 @@ use photos::{graphql_schema, InternalError};
 
 use tokio::sync::{broadcast, Mutex};
 pub type ApplicationSchema = Schema<Query, Mutation, Subscription>;
-
-
-
 
 async fn index(schema: web::Data<ApplicationSchema>, req: GraphQLRequest) -> GraphQLResponse {
     schema.execute(req.into_inner()).await.into()
@@ -85,17 +82,8 @@ async fn main() -> Result<(), InternalError> {
             .allowed_origin("http://localhost:8080")
             .allowed_origin_fn(|origin, _req_head| origin.as_bytes().ends_with(b".rust-lang.org"))
             .allowed_methods(vec!["GET", "POST"])
-            .allowed_headers(vec![
-                http::header::AUTHORIZATION,
-                http::header::ACCEPT,
-                http::header::UPGRADE,
-                http::header::CONNECTION,
-                http::header::SEC_WEBSOCKET_VERSION,
-                http::header::SEC_WEBSOCKET_KEY,
-                http::header::SEC_WEBSOCKET_EXTENSIONS,
-                http::header::CONTENT_TYPE
-            ])
-            // .allowed_header(http::header::CONTENT_TYPE)
+            .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
+            .allowed_header(http::header::CONTENT_TYPE)
             .supports_credentials()
             .max_age(3600);
         App::new()
