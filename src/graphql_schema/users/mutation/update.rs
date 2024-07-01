@@ -1,6 +1,6 @@
-use crate::{models::User, schema::users::middle_name};
+use crate::models::User;
 use async_graphql::{Context, InputObject, Object, Result};
-use diesel::{connection, ExpressionMethods, QueryDsl};
+use diesel::{ExpressionMethods, QueryDsl};
 use diesel_async::{pooled_connection::deadpool::Pool, AsyncPgConnection, RunQueryDsl};
 use validator::Validate;
 
@@ -12,8 +12,6 @@ pub struct UserUpdateInput {
     pub user_id: i32,
     #[validate(length(min = 4, max = 15))]
     pub first_name: Option<String>,
-    // #[validate(length(min = 4, max = 15))]
-    // pub middle_name: Option<String>,
     #[validate(length(min = 4, max = 15))]
     pub last_name: Option<String>,
     #[validate(length(min = 4, max = 15))]
@@ -23,7 +21,7 @@ pub struct UserUpdateInput {
 #[Object]
 impl UpdateUser {
     pub async fn update_user(&self, ctx: &Context<'_>, input: UserUpdateInput) -> Result<User> {
-        use crate::schema::users::dsl::{first_name, last_name, middle_name, username, users};
+        use crate::schema::users::dsl::{first_name, last_name, username, users};
 
         let pool: &Pool<AsyncPgConnection> = ctx.data()?;
         let mut conn = pool.get().await?;
@@ -33,8 +31,6 @@ impl UpdateUser {
         let updated_user = diesel::update(users.find(input.user_id))
             .set((
                 first_name.eq(input.first_name.unwrap_or(user.first_name)),
-                // middle_name.eq(Some(middle_name)),
-                // middle_name.eq(input.middle_name.unwrap_or(user.middle_name)),
                 last_name.eq(input.last_name.unwrap_or(user.last_name)),
                 username.eq(input.username.unwrap_or(user.username)),
             ))

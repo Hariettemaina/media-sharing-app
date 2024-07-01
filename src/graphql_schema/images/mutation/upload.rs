@@ -6,21 +6,19 @@ use amqprs::connection::{Connection, OpenConnectionArguments};
 use amqprs::{callbacks, BasicProperties, DELIVERY_MODE_PERSISTENT};
 use async_graphql::futures_util::TryFutureExt;
 use async_graphql::{Context, InputObject, Object, Result, Upload};
+use async_std::sync::Arc;
 use chrono::{NaiveDateTime, Utc};
 use diesel::ExpressionMethods;
 use diesel_async::AsyncPgConnection;
 use diesel_async::{pooled_connection::deadpool::Pool, RunQueryDsl};
-use image::ImageFormat;
-use image::{imageops::FilterType, GenericImageView};
+use image::{GenericImageView, ImageFormat};
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::Path;
 use tokio::sync::{broadcast, Mutex};
 use uuid::Uuid;
-use async_std::sync::Arc;
 
 #[derive(Default)]
-
 pub struct UploadMedia;
 
 #[derive(InputObject)]
@@ -91,17 +89,9 @@ impl UploadMedia {
         };
 
         let (width, height) = img.dimensions();
-        log::info!("Height:{}, Width:{}",height,width);
 
-        // Define the target widths for each viewport category
-        let target_widths = [
-            480,  // Mobile devices
-            768,  // iPads/Tablets
-            1024, // Desktops
-            1024, // Laptops
-            1440, 2650, // Extra large screens
-        ];
         let image_format = ImageFormat::from_extension(extension).unwrap();
+
         let image_format_str = match image_format {
             ImageFormat::Png => "PNG",
             ImageFormat::Jpeg => "JPEG",
@@ -120,60 +110,29 @@ impl UploadMedia {
             ImageFormat::Qoi => "Qoi",
             _ => "None",
         };
-        // Process each viewport category
-        for target_width in &target_widths {
-            let target_height =
-                ((height as f64 / width as f64 * *target_width as f64).round() as u32).max(1); // Ensure height is at least 1 pixel
-            let resized_img = img.resize_exact(*target_width, target_height, FilterType::Triangle);
 
-            // Save the resized image
-            let resized_filepath = format!(
-                "{}/resized_{}_{}.png",
-                user_uploads_dir, filename, target_width
-            );
-            if let Err(e) = resized_img.save(&resized_filepath) {
-                log::error!("Failed to save resized image: {}", e);
-                return Err(async_graphql::Error::new(format!(
-                    "Failed to save resized image: {}",
-                    e
-                )));
-            }
+        let pool: &Pool<AsyncPgConnection> = ctx.data()?;
+        let mut conn = pool.get().await?;
 
-            let pool: &Pool<AsyncPgConnection> = ctx.data()?;
-            let mut conn = pool.get().await?;
-
-            diesel::insert_into(images::table)
-                .values((
-                    images::name.eq(filename.clone()),
-                    images::file_path.eq(&filepath),
-                    images::description.eq(Some("Resized image".to_string())),
-                    images::exif_data.eq(None::<String>),
-                    images::format.eq(image_format_str),
-                    images::size.eq(image_data.len() as i32),
-                    images::width.eq(width as i32),
-                    images::height.eq(width as i32),
-                    images::created_at.eq(time_now),
-                    images::deleted_at.eq(None::<NaiveDateTime>),
-                ))
-                .execute(&mut conn)
-                .map_err(|e| {
-                    log::error!("Failed to insert image into database: {}", e);
-                    PhotoError::DatabaseError
-                })
-                .await?;
-        }
-        // let (tx, _) = broadcast::channel::<MediaUpdate>(100);
-        // let mut rx = tx.subscribe();
-        // match tx.send(MediaUpdate {
-        //     message: "New media uploaded!".to_string(),
-        //     user_id: input.user_id,
-        // }) {
-        //     Ok(_) => println!("Message sent successfully"),
-        //     Err(e) => println!("Failed to send message: {:?}", e),
-        // }
-        // rx.recv().await.unwrap();
-        log::info!("Height1:{}, Width1:{}",height,width);
-
+        diesel::insert_into(images::table)
+            .values((
+                images::name.eq(filename.clone()),
+                images::file_path.eq(&filepath),
+                images::description.eq(Some("Original image".to_string())),
+                images::exif_data.eq(None::<String>),
+                images::format.eq(image_format_str),
+                images::size.eq(image_data.len() as i32),
+                images::width.eq(width as i32),
+                images::height.eq(height as i32),
+                images::created_at.eq(time_now),
+                images::deleted_at.eq(None::<NaiveDateTime>),
+            ))
+            .execute(&mut conn)
+            .map_err(|e| {
+                log::error!("Failed to insert image into database: {}", e);
+                PhotoError::DatabaseError
+            })
+            .await?;
 
         // RabbitMQ publishing logic
         let message = format!(
@@ -185,23 +144,22 @@ impl UploadMedia {
             width,
             height
         );
-        
 
-        let tx = ctx.data_unchecked::<Arc<Mutex<broadcast::Sender<MediaUpdate>>>>().clone();
+        let tx = ctx
+            .data_unchecked::<Arc<Mutex<broadcast::Sender<MediaUpdate>>>>()
+            .clone();
         let tx = tx.lock().await;
         let mut rx = tx.subscribe();
-        if tx.send(MediaUpdate {user_id:input.user_id, message: message.clone() }) .is_err() {
+        if tx
+            .send(MediaUpdate {
+                user_id: input.user_id,
+                message: message.clone(),
+            })
+            .is_err()
+        {
             log::error!("Failed to send message");
         }
         rx.recv().await.unwrap();
-        // let (tx, _) = broadcast::channel::<MediaUpdate>(100);
-        // let mut rx = tx.subscribe();
-        
-        // match tx.send(MediaUpdate {user_id:input.user_id, message: message.clone() }) {
-        //     Ok(_) => println!("Message sent successfully"),
-        //     Err(e) => println!("Failed to send message: {:?}", e),
-        // }
-        // rx.recv().await.unwrap();
 
         send_message_to_rabbitmq(message).await.unwrap();
 

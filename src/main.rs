@@ -1,4 +1,5 @@
 use actix_cors::Cors;
+use actix_session::Session;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::HttpRequest;
 use actix_web::{cookie::Key, guard, http, web, web::Data, App, HttpResponse, HttpServer, Result};
@@ -8,17 +9,48 @@ use diesel_async::pooled_connection::{deadpool::Pool, AsyncDieselConnectionManag
 use graphql_schema::{Mutation, Query, Subscription};
 use photos::graphql_schema::images::subscriptions::new_image::MediaUpdate;
 use photos::mailer::BrevoApi;
-use std::sync::Arc;
-// use photos::models::Images;
+use photos::models::User;
 use photos::password::PassWordHasher;
 use photos::services::image_processor::ImageProcessor;
 use photos::{graphql_schema, InternalError};
+use std::sync::Arc;
+use send_wrapper::SendWrapper;
+use std::ops::Deref;
 
 use tokio::sync::{broadcast, Mutex};
 pub type ApplicationSchema = Schema<Query, Mutation, Subscription>;
 
-async fn index(schema: web::Data<ApplicationSchema>, req: GraphQLRequest) -> GraphQLResponse {
-    schema.execute(req.into_inner()).await.into()
+
+
+pub struct RequestContext {
+    pub session: Shared<SendWrapper<Session>>,
+}
+pub struct Shared<T>(pub Option<SendWrapper<T>>);
+
+impl<T> Shared<T> {
+    pub fn new(v: T) -> Self {
+        Self(Some(SendWrapper::new(v)))
+    }
+}
+
+impl<T> Deref for Shared<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.0.as_deref().clone().unwrap()
+    }
+}
+
+async fn index(
+    schema: web::Data<ApplicationSchema>,
+    req: GraphQLRequest,
+    context: web::Data<RequestContext>,
+) -> GraphQLResponse {
+    let mut request = req.into_inner();
+    let session = context.session.clone();
+    request = request.data(session);
+    let response: GraphQLResponse = schema.execute(request).await.into();
+    response
 }
 
 async fn index_graphiql() -> Result<HttpResponse> {
@@ -52,10 +84,11 @@ async fn main() -> Result<(), InternalError> {
     let brevo_api = BrevoApi::new(api_key, email);
 
     let database_url = dotenvy::var("DATABASE_URL").unwrap();
-    // let (tx, _) = broadcast::channel::<User>(100);
+    let (user_tx, _) = broadcast::channel::<User>(100);
     let secret_key = Key::generate();
-    let (tx, _) = broadcast::channel::<MediaUpdate>(100);
-    let tx = Arc::new(Mutex::new(tx));
+    let (media_update_tx, _) = broadcast::channel::<MediaUpdate>(100);
+    let user_tx = Arc::new(Mutex::new(user_tx));
+    let media_update_tx = Arc::new(Mutex::new(media_update_tx));
 
     let config = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(database_url);
     let pool = Pool::builder(config).build()?;
@@ -70,7 +103,8 @@ async fn main() -> Result<(), InternalError> {
     .data(brevo_api)
     .data(password_hasher)
     .data(image_processor)
-    .data(tx.clone())
+    .data(user_tx.clone())
+    .data(media_update_tx.clone())
     .finish();
 
     println!("starting HTTP server at http://localhost:8080");

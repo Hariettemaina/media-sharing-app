@@ -1,5 +1,4 @@
 use crate::models::User;
-use async_graphql::futures_util::stream::Stream;
 use async_graphql::{Context, Subscription};
 use futures_util::lock::Mutex;
 use tokio_stream::StreamExt;

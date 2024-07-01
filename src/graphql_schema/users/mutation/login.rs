@@ -1,10 +1,9 @@
+use crate::error::PhotoError;
 use crate::models::User;
 use async_graphql::{Context, InputObject, Object, Result};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl};
 use diesel_async::{pooled_connection::deadpool::Pool, AsyncPgConnection, RunQueryDsl};
 use validator::Validate;
-
-use crate::error::PhotoError;
 
 #[derive(Validate, InputObject)]
 pub struct LoginInput {

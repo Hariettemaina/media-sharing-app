@@ -9,6 +9,8 @@ use async_graphql::{Context, InputObject, Object, Result};
 use chrono::{Duration, NaiveDate, Utc};
 use diesel_async::{pooled_connection::deadpool::Pool, AsyncPgConnection, RunQueryDsl};
 use std::env;
+use tokio::sync::{broadcast, Mutex};
+use std::sync::Arc;
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
@@ -109,6 +111,14 @@ impl AddUser {
                 log::error!("Failed to register user: {}", e);
                 PhotoError::UserAccountAlreadyExists
             })?;
+
+        if let Ok(tx) = ctx.data::<Arc<Mutex<broadcast::Sender<User>>>>(){
+            let tx = tx.lock().await;
+        let _ = tx.send(created_user.clone());
+        }else {
+            log::error!("failed to get user from channel");
+        }
+        
 
         Ok(created_user)
     }

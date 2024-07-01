@@ -152,7 +152,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
-
 // function getUserIdFromCookie() {
 //     var key, value, i;
 //     var cookieArray = document.cookie.split(';');
