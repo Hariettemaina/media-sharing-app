@@ -3,55 +3,58 @@ use actix_session::Session;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::HttpRequest;
 use actix_web::{cookie::Key, guard, http, web, web::Data, App, HttpResponse, HttpServer, Result};
+
 use async_graphql::{http::GraphiQLSource, Schema};
 use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use diesel_async::pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager};
 use graphql_schema::{Mutation, Query, Subscription};
 use photos::graphql_schema::images::subscriptions::new_image::MediaUpdate;
+use photos::graphql_schema::users::mutation::login::Shared;
 use photos::mailer::BrevoApi;
 use photos::models::User;
 use photos::password::PassWordHasher;
 use photos::services::image_processor::ImageProcessor;
 use photos::{graphql_schema, InternalError};
 use std::sync::Arc;
-use send_wrapper::SendWrapper;
-use std::ops::Deref;
 
 use tokio::sync::{broadcast, Mutex};
 pub type ApplicationSchema = Schema<Query, Mutation, Subscription>;
 
+// async fn index(schema: web::Data<ApplicationSchema>, req: GraphQLRequest) -> GraphQLResponse {
+//     schema.execute(req.into_inner()).await.into()
+// }
 
+// async fn index(
+//     schema: web::Data<ApplicationSchema>,
+//     req: GraphQLRequest,
+//     session: Session,
+// ) -> GraphQLResponse {
+//     let user_id: Option<i32> = session.get("user_id").unwrap_or(None);
+//     let mut request = req.into_inner();
+//     request = request.data(MyContext { user_id });
+//     schema.execute(request).await.into()
+// }
 
-pub struct RequestContext {
-    pub session: Shared<SendWrapper<Session>>,
-}
-pub struct Shared<T>(pub Option<SendWrapper<T>>);
-
-impl<T> Shared<T> {
-    pub fn new(v: T) -> Self {
-        Self(Some(SendWrapper::new(v)))
-    }
-}
-
-impl<T> Deref for Shared<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &*self.0.as_deref().clone().unwrap()
-    }
+pub struct MyContext {
+    pub user_id: Option<i32>,
 }
 
 async fn index(
     schema: web::Data<ApplicationSchema>,
     req: GraphQLRequest,
-    context: web::Data<RequestContext>,
+    session: Session, // Adjusted to use Shared<T>
 ) -> GraphQLResponse {
-    let mut request = req.into_inner();
-    let session = context.session.clone();
-    request = request.data(session);
-    let response: GraphQLResponse = schema.execute(request).await.into();
-    response
+    let _user_id: Option<i32> = session.get("user_id").unwrap_or(None);
+    let request = req.into_inner();
+    let session = Shared::new(session); // This line seems redundant since you're passing `session` directly to `req.into_inner().data(session)`
+    
+    // Execute the schema asynchronously and await the result
+    let result = schema.execute(request.data(session)).await;
+    
+    // Convert the result into a GraphQLResponse
+    GraphQLResponse::from(result)
 }
+
 
 async fn index_graphiql() -> Result<HttpResponse> {
     Ok(HttpResponse::Ok()

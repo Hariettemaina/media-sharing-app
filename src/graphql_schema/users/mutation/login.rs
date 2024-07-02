@@ -1,9 +1,34 @@
 use crate::error::PhotoError;
 use crate::models::User;
+use actix_session::Session;
 use async_graphql::{Context, InputObject, Object, Result};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl};
 use diesel_async::{pooled_connection::deadpool::Pool, AsyncPgConnection, RunQueryDsl};
 use validator::Validate;
+use send_wrapper::SendWrapper;
+use std::ops::Deref;
+
+#[derive(Clone, Debug)]
+pub struct Shared<T>(pub Option<SendWrapper<T>>);
+
+impl<T> Shared<T> {
+    pub fn new(v: T) -> Self {
+        Self(Some(SendWrapper::new(v)))
+    }
+}
+
+impl<T> Deref for Shared<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.0.as_deref().clone().unwrap()
+    }
+}
+
+
+pub struct RequestContext {
+    pub session: Shared<Session>,
+}
 
 #[derive(Validate, InputObject)]
 pub struct LoginInput {
@@ -50,6 +75,10 @@ impl Login {
                             .unwrap();
 
                         if hasher.verify_password(input.password, password_hash) {
+                            // Set the user_id in the session
+                            let session = ctx.data::<Shared<Session>>().unwrap();
+                            session.insert("user_id", user.id)?;
+
                             Ok(user)
                         } else {
                             Err(PhotoError::InvalidCredentials.into())
