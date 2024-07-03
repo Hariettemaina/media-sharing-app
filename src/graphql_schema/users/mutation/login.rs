@@ -1,12 +1,11 @@
-use crate::error::PhotoError;
+use crate::{error::PhotoError, RequestContext};
 use crate::models::User;
-use actix_session::Session;
 use async_graphql::{Context, InputObject, Object, Result};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl};
 use diesel_async::{pooled_connection::deadpool::Pool, AsyncPgConnection, RunQueryDsl};
-use validator::Validate;
 use send_wrapper::SendWrapper;
 use std::ops::Deref;
+use validator::Validate;
 
 #[derive(Clone, Debug)]
 pub struct Shared<T>(pub Option<SendWrapper<T>>);
@@ -26,9 +25,6 @@ impl<T> Deref for Shared<T> {
 }
 
 
-pub struct RequestContext {
-    pub session: Shared<Session>,
-}
 
 #[derive(Validate, InputObject)]
 pub struct LoginInput {
@@ -76,9 +72,9 @@ impl Login {
 
                         if hasher.verify_password(input.password, password_hash) {
                             // Set the user_id in the session
-                            let session = ctx.data::<Shared<Session>>().unwrap();
+                            let request_context = ctx.data::<RequestContext>()?;
+                            let session = &request_context.session;
                             session.insert("user_id", user.id)?;
-
                             Ok(user)
                         } else {
                             Err(PhotoError::InvalidCredentials.into())

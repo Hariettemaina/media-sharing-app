@@ -14,7 +14,8 @@ use photos::mailer::BrevoApi;
 use photos::models::User;
 use photos::password::PassWordHasher;
 use photos::services::image_processor::ImageProcessor;
-use photos::{graphql_schema, InternalError};
+use photos::{graphql_schema, InternalError, RequestContext};
+use send_wrapper::SendWrapper;
 use std::sync::Arc;
 
 use tokio::sync::{broadcast, Mutex};
@@ -24,32 +25,20 @@ pub type ApplicationSchema = Schema<Query, Mutation, Subscription>;
 //     schema.execute(req.into_inner()).await.into()
 // }
 
-// async fn index(
-//     schema: web::Data<ApplicationSchema>,
-//     req: GraphQLRequest,
-//     session: Session,
-// ) -> GraphQLResponse {
-//     let user_id: Option<i32> = session.get("user_id").unwrap_or(None);
-//     let mut request = req.into_inner();
-//     request = request.data(MyContext { user_id });
-//     schema.execute(request).await.into()
-// }
 
-pub struct MyContext {
-    pub user_id: Option<i32>,
-}
 
 async fn index(
     schema: web::Data<ApplicationSchema>,
     req: GraphQLRequest,
-    session: Session, // Adjusted to use Shared<T>
+    session: Session, 
 ) -> GraphQLResponse {
-    let _user_id: Option<i32> = session.get("user_id").unwrap_or(None);
+    let user_id = Shared::new(SendWrapper::new(session.clone()));
     let request = req.into_inner();
-    let session = Shared::new(session); // This line seems redundant since you're passing `session` directly to `req.into_inner().data(session)`
-    
+    let request_context = RequestContext {
+        session: user_id,
+    };
     // Execute the schema asynchronously and await the result
-    let result = schema.execute(request.data(session)).await;
+    let result = schema.execute(request.data(request_context)).await;
     
     // Convert the result into a GraphQLResponse
     GraphQLResponse::from(result)
@@ -75,6 +64,9 @@ async fn index_ws(
     println!("Websocket...");
     GraphQLSubscription::new(Schema::clone(&*schema)).start(&req, payload)
 }
+
+
+
 
 #[actix_web::main]
 async fn main() -> Result<(), InternalError> {

@@ -4,30 +4,24 @@ document.addEventListener('DOMContentLoaded', function () {
     const mediaGrid = document.querySelector('.media-grid');
 
     let websocket;
+    const uploadedImages = new Set();
 
     function initWebSocket() {
         websocket = new WebSocket('ws://localhost:8080', 'graphql-ws');
 
         websocket.onopen = function () {
             console.log('WebSocket connection established');
-            const payload = {
-                type: 'connection_init',
-                payload: {}
-            };
-            websocket.send(JSON.stringify(payload));
+            websocket.send(JSON.stringify({ type: 'connection_init', payload: {} }));
             startSubscription();
         };
-
         websocket.onmessage = function (event) {
             console.log('WebSocket message received:', event.data);
             const message = JSON.parse(event.data);
             handleWebSocketMessage(message);
         };
-
         websocket.onclose = function () {
             console.log('WebSocket connection closed');
         };
-
         websocket.onerror = function (error) {
             console.error('WebSocket error:', error);
         };
@@ -38,14 +32,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (message.type === 'data' && message.id === '1') {
             const mediaUpdate = message.payload.data.mediaUpdates;
             const imageUrl = extractImageUrl(mediaUpdate.message);
-            appendImageToGrid(imageUrl);
-
-            alert('New image uploaded successfully!');
+            appendImageToGrid(imageUrl, false);
         }
     }
 
     function extractImageUrl(message) {
-        const matches = message.match(/Path: (.+?) /);
+        const matches = message.match(/Path: (.+?)\n/);
         if (matches && matches[1]) {
             return `http://localhost:8080/${matches[1].trim()}`;
         }
@@ -53,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function startSubscription() {
-        const subscriptionQuery = {
+        websocket.send(JSON.stringify({
             id: '1',
             type: 'start',
             payload: {
@@ -67,24 +59,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 `,
                 variables: {}
             }
-        };
-        websocket.send(JSON.stringify(subscriptionQuery));
+        }));
     }
 
     uploadForm.addEventListener('submit', async function (event) {
         event.preventDefault();
-
-        const userId = sessionStorage.getItem("userId");
+        const userId = localStorage.getItem("userId");
         if (!userId) {
             alert('Please login first');
             return;
         }
-
         if (!fileInput.files.length) {
             alert('Please select a file to upload.');
             return;
         }
-
         const formData = new FormData();
         formData.append('operations', JSON.stringify({
             query: `
@@ -103,21 +91,15 @@ document.addEventListener('DOMContentLoaded', function () {
         }));
         formData.append('map', JSON.stringify({ '0': ['variables.input.image'] }));
         formData.append('0', fileInput.files[0]);
-
         try {
-            const response = await fetch('http://localhost:8080', {
-                method: 'POST',
-                body: formData
-            });
+            const response = await fetch('http://localhost:8080', { method: 'POST', body: formData });
             const data = await response.json();
-
             if (data.errors) {
                 console.error('Upload failed:', data.errors);
                 alert('Upload failed. Please try again.');
             } else if (data.data && data.data.images.upload) {
                 const imageData = data.data.images.upload;
-                appendImageToGrid(imageData);
-                storeImageInSession(imageData);
+                appendImageToGrid(imageData, false); 
             }
         } catch (error) {
             console.error('Error:', error);
@@ -126,30 +108,36 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function loadStoredImages() {
-        const storedImages = JSON.parse(sessionStorage.getItem('uploadedimages')) || [];
-        storedImages.forEach(appendImageToGrid);
+        const storedImages = JSON.parse(localStorage.getItem('uploadedimages')) || [];
+        storedImages.forEach(imageUrl => appendImageToGrid(imageUrl, true)); 
     }
 
-    function appendImageToGrid(imageUrl) {
-        if (imageUrl) {
+    function appendImageToGrid(imageUrl, isInitialLoad = false) {
+        if (imageUrl && !uploadedImages.has(imageUrl)) {
             const imgElement = document.createElement('img');
             imgElement.src = imageUrl;
             imgElement.style.width = '100%';
             imgElement.style.height = 'auto';
             mediaGrid.appendChild(imgElement);
+            uploadedImages.add(imageUrl);
+            if (!isInitialLoad) {
+                storeImageInLocal(imageUrl);
+            }
+        }
+    }
+    
+
+    function storeImageInLocal(imageUrl) {
+        const storedImages = JSON.parse(localStorage.getItem('uploadedimages')) || [];
+        if (!storedImages.includes(imageUrl)) {
+            storedImages.push(imageUrl);
+            localStorage.setItem('uploadedimages', JSON.stringify(storedImages));
         }
     }
 
-    function storeImageInSession(imageUrl) {
-        const storedImages = JSON.parse(sessionStorage.getItem('uploadedimages')) || [];
-        storedImages.push(imageUrl);
-        sessionStorage.setItem('uploadedimages', JSON.stringify(storedImages));
-    }
-
     initWebSocket();
-    loadStoredImages();
+    loadStoredImages(); 
 });
-
 
 
 // function getUserIdFromCookie() {

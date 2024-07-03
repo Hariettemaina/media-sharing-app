@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Media Sharing Dashboard</title>
     <link rel="stylesheet" href="dash.css" />
+    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js@1/src/toastify.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js@1/src/toastify.min.js"></script> -->
+
 </head>
 <body>
     <header>
@@ -13,7 +16,7 @@
                 <li><a href="#">Home</a></li>
                 <li><a href="#">Upload</a></li>
                 <li><a href="profile.html">Profile</a></li>
-                <li><a href="#">Logout</a></li>
+                <li><a href="#" id="logoutButton">Logout</a></li>
             </ul>
         </nav>
         <div id="welcome-message"></div>
@@ -41,8 +44,8 @@
     <script src="scripts.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            const userId = sessionStorage.getItem("userId");
-            const userName = sessionStorage.getItem("userName");
+            const userId = localStorage.getItem("userId");
+            const userName = localStorage.getItem("userName");
 
             console.log("Retrieved userId:", userId); // Debugging line
             console.log("Retrieved userName:", userName); // Debugging line
@@ -52,6 +55,13 @@
             } else {
                 document.getElementById("welcome-message").innerText = `Welcome, ${userName}`;
             }
+
+            document.getElementById("logoutButton").addEventListener("click", function () {
+                localStorage.removeItem('userId');
+                localStorage.removeItem('userName');
+                alert('You have been logged out.');
+                window.location.href = 'login.html';
+            });
         });
     </script>
 </body>

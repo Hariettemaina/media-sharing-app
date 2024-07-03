@@ -7,15 +7,15 @@ document.addEventListener("DOMContentLoaded", function () {
         const password = document.getElementById("loginPassword").value;
 
         const mutation = `
-    mutation Login($input: LoginInput!) {
-        users {
-            login(input: $input) {
-                id
-                username
+            mutation Login($input: LoginInput!) {
+                users {
+                    login(input: $input) {
+                        id
+                        username
+                    }
+                }
             }
-        }
-    }
-`;
+        `;
 
         const variables = {
             input: {
@@ -35,22 +35,22 @@ document.addEventListener("DOMContentLoaded", function () {
                 variables,
             }),
         })
-            .then(response => response.json())
-            .then(data => {
-                if (data.errors) {
-                    console.error('GraphQL Error:', data.errors);
-                    alert('Login failed. Please try again.');
-                } else {
-                    alert('Login successful!');
-                    const user = data.data.users.login;
-                    sessionStorage.setItem('userId', user.id);
-                    sessionStorage.setItem('userName', user.username);
-                    window.location.href = 'dashboard.html';
-                }
-            })
-            .catch(error => {
-                console.error('Network error:', error);
-                alert('Network error. Please try again.');
-            });
+        .then(response => response.json())
+        .then(data => {
+            if (data.errors) {
+                console.error('GraphQL Error:', data.errors);
+                alert('Login failed. Please try again.');
+            } else {
+                alert('Login successful!');
+                const user = data.data.users.login;
+                localStorage.setItem('userId', user.id);
+                localStorage.setItem('userName', user.username);
+                window.location.href = 'dashboard.html';
+            }
+        })
+        .catch(error => {
+            console.error('Network error:', error);
+            alert('Network error. Please try again.');
+        });
     });
 });
