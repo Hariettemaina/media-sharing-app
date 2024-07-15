@@ -1,47 +1,7 @@
+use amqprs::callbacks::DefaultChannelCallback;
 use amqprs::channel::BasicConsumeArguments;
-use amqprs::connection::{Connection, OpenConnectionArguments};
-use amqprs::callbacks;
-
-//use tokio::task; // for spawning async tasks
-
-async fn consume_messages_from_rabbitmq() -> Result<(), Box<dyn std::error::Error>> {
-    let connection = Connection::open(&OpenConnectionArguments::new(
-        "localhost",
-        5672,
-        "guest",
-        "guest",
-    )).await.unwrap();
-    connection.register_callback(callbacks::DefaultConnectionCallback).await?;
-
-    let channel = connection.open_channel(None).await?;
-    channel.register_callback(callbacks::DefaultChannelCallback).await?;
-
-    let queue_name = "image_processing_queue";
-    let consume_args = BasicConsumeArguments::new("", &queue_name);
-    let (_ctag, mut rx)  = channel.basic_consume_rx(consume_args).await?;
-
-    println!("[*] Waiting for messages. To exit press CTRL+C");
-
-    while let Some(msg) = rx.recv().await {
-        if let Some(payload) = msg.content {
-            println!(" [x] Received {:?}", std::str::from_utf8(&payload).unwrap());
-            //channel.basic_ack(msg.deliver.delivery_tag, ).await.unwrap();
-        }
-    };
-
-        // Process the message asynchronously
-    //     task::spawn(async move {
-    //         // Simulate processing delay
-    //         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-    //         println!("Processed: {}", message);
-
-    //         // Acknowledge the message
-    //         channel.basic_ack(delivery.delivery_tag, ).await.unwrap();
-    //     });
-    // }
-
-    Ok(())
-}
+use amqprs::connection::Connection;
+use amqprs::connection::OpenConnectionArguments;
 
 
 #[tokio::main]
@@ -51,6 +11,44 @@ async fn main() {
     }
 }
 
+async fn consume_messages_from_rabbitmq() -> Result<(), Box<dyn std::error::Error>> {
+    let connection_args = OpenConnectionArguments::new("localhost", 5672, "guest", "guest");
+
+    let connection = Connection::open(&connection_args).await?;
+    let channel = connection.open_channel(None).await?;
+    channel.register_callback(DefaultChannelCallback).await?;
+
+    let consume_args = BasicConsumeArguments::new("image_processing_queue", "");
+    let (_ctag, mut rx) = channel.basic_consume_rx(consume_args).await?;
+
+    println!("[*] Waiting for messages. To exit press CTRL+C");
+
+    while let Some(msg) = rx.recv().await {
+        if let Some(payload) = msg.content {
+            println!(" [x] Received {:?}", std::str::from_utf8(&payload).unwrap());
+
+            // Process the image
+            let message_result = serde_json::from_slice::<serde_json::Value>(&payload);
+            match message_result {
+                Ok(message) => {
+                    let filepath = message["filepath"].as_str().unwrap_or("default_path");
+                    process_image(filepath);
+                }
+                Err(e) => println!("Failed to parse JSON: {}", e),
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn process_image(filepath: &str) {
+    // Perform image processing tasks such as resizing and generating thumbnails
+    let img = image::open(filepath).unwrap();
+    let thumbnail = img.thumbnail(200, 200);
+    let thumbnail_path = filepath.replace(".jpg", "_thumbnail.jpg");
+    thumbnail.save(thumbnail_path).unwrap();
+}
 
 // **Real-time Updates with WebSockets**
 
