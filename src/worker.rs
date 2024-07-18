@@ -43,7 +43,6 @@ async fn consume_messages_from_rabbitmq() -> Result<(), Box<dyn std::error::Erro
 }
 
 fn process_image(filepath: &str) {
-    // Perform image processing tasks such as resizing and generating thumbnails
     let img = image::open(filepath).unwrap();
     let thumbnail = img.thumbnail(200, 200);
     let thumbnail_path = filepath.replace(".jpg", "_thumbnail.jpg");

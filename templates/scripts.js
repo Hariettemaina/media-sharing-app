@@ -6,6 +6,9 @@ document.addEventListener('DOMContentLoaded', function () {
     let websocket;
     const uploadedImages = new Set();
 
+    
+    const currentUserID = localStorage.getItem("userId");
+
     function initWebSocket() {
         websocket = new WebSocket('ws://localhost:8080', 'graphql-ws');
 
@@ -32,7 +35,14 @@ document.addEventListener('DOMContentLoaded', function () {
         if (message.type === 'data' && message.id === '1') {
             const mediaUpdate = message.payload.data.mediaUpdates;
             const imageUrl = extractImageUrl(mediaUpdate.message);
+            const uploaderUserId = mediaUpdate.userId;
+            // const uploaderUserName = mediaUpdate.userName;
+            alert(`${uploaderUserId} (ID: ${uploaderUserId}) has uploaded an image!`);
+
+
             appendImageToGrid(imageUrl, false);
+
+            
         }
     }
 
@@ -61,6 +71,10 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }));
     }
+
+    // function alertUser(userId, imageUrl) {
+    //     alert(`User ${userId} has uploaded a new image: ${imageUrl}`);
+    // }
 
     uploadForm.addEventListener('submit', async function (event) {
         event.preventDefault();
@@ -99,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 alert('Upload failed. Please try again.');
             } else if (data.data && data.data.images.upload) {
                 const imageData = data.data.images.upload;
-                appendImageToGrid(imageData, false); 
+                // appendImageToGrid(imageData, false); 
             }
         } catch (error) {
             console.error('Error:', error);
@@ -109,11 +123,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function loadStoredImages() {
         const storedImages = JSON.parse(localStorage.getItem('uploadedimages')) || [];
-        storedImages.forEach(imageUrl => appendImageToGrid(imageUrl, true)); 
+        storedImages.forEach(imageUrl => appendImageToGrid(imageUrl, true));
     }
 
     function appendImageToGrid(imageUrl, isInitialLoad = false) {
         if (imageUrl && !uploadedImages.has(imageUrl)) {
+            console.log('Appending image: ${imageUrl}');
             const imgElement = document.createElement('img');
             imgElement.src = imageUrl;
             imgElement.style.width = '100%';
@@ -123,9 +138,11 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!isInitialLoad) {
                 storeImageInLocal(imageUrl);
             }
+        } else {
+            console.log(`Image URL already exists: ${imageUrl}`); // Debugging log
         }
     }
-    
+
 
     function storeImageInLocal(imageUrl) {
         const storedImages = JSON.parse(localStorage.getItem('uploadedimages')) || [];
@@ -136,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     initWebSocket();
-    loadStoredImages(); 
+    loadStoredImages();
 });
 
 
