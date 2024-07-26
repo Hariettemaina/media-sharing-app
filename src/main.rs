@@ -1,6 +1,7 @@
 use actix_cors::Cors;
 use actix_session::Session;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
+use actix_web::cookie::SameSite;
 use actix_web::HttpRequest;
 use actix_web::{cookie::Key, guard, http, web, web::Data, App, HttpResponse, HttpServer, Result};
 
@@ -25,25 +26,20 @@ pub type ApplicationSchema = Schema<Query, Mutation, Subscription>;
 //     schema.execute(req.into_inner()).await.into()
 // }
 
-
-
 async fn index(
     schema: web::Data<ApplicationSchema>,
     req: GraphQLRequest,
-    session: Session, 
+    session: Session,
 ) -> GraphQLResponse {
     let user_id = Shared::new(SendWrapper::new(session.clone()));
     let request = req.into_inner();
-    let request_context = RequestContext {
-        session: user_id,
-    };
+    let request_context = RequestContext { session: user_id };
     // Execute the schema asynchronously and await the result
     let result = schema.execute(request.data(request_context)).await;
-    
+
     // Convert the result into a GraphQLResponse
     GraphQLResponse::from(result)
 }
-
 
 async fn index_graphiql() -> Result<HttpResponse> {
     Ok(HttpResponse::Ok()
@@ -64,9 +60,6 @@ async fn index_ws(
     println!("Websocket...");
     GraphQLSubscription::new(Schema::clone(&*schema)).start(&req, payload)
 }
-
-
-
 
 #[actix_web::main]
 async fn main() -> Result<(), InternalError> {
@@ -116,10 +109,13 @@ async fn main() -> Result<(), InternalError> {
             .supports_credentials()
             .max_age(3600);
         App::new()
-            .wrap(SessionMiddleware::new(
-                CookieSessionStore::default(),
-                secret_key.clone(),
-            ))
+            .wrap(
+                SessionMiddleware::builder(CookieSessionStore::default(), secret_key.clone())
+                    .cookie_same_site(SameSite::None)
+                    .cookie_name("token".into())
+                    .cookie_secure(true)
+                    .build(),
+            )
             .wrap(cors)
             .app_data(Data::new(schema.clone()))
             .service(web::resource("/").guard(guard::Post()).to(index))

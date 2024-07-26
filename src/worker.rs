@@ -2,7 +2,8 @@ use amqprs::callbacks::DefaultChannelCallback;
 use amqprs::channel::BasicConsumeArguments;
 use amqprs::connection::Connection;
 use amqprs::connection::OpenConnectionArguments;
-
+use image::GenericImageView;
+use std::str;
 
 #[tokio::main]
 async fn main() {
@@ -25,16 +26,14 @@ async fn consume_messages_from_rabbitmq() -> Result<(), Box<dyn std::error::Erro
 
     while let Some(msg) = rx.recv().await {
         if let Some(payload) = msg.content {
-            println!(" [x] Received {:?}", std::str::from_utf8(&payload).unwrap());
+            let message_str = str::from_utf8(&payload).unwrap();
+            println!(" [x] Received {:?}", message_str);
 
-            // Process the image
-            let message_result = serde_json::from_slice::<serde_json::Value>(&payload);
-            match message_result {
-                Ok(message) => {
-                    let filepath = message["filepath"].as_str().unwrap_or("default_path");
-                    process_image(filepath);
-                }
-                Err(e) => println!("Failed to parse JSON: {}", e),
+            // Extract the file path from the message
+            if let Some(filepath) = extract_filepath(message_str) {
+                process_image(filepath);
+            } else {
+                println!("Failed to extract filepath from message: {:?}", message_str);
             }
         }
     }
@@ -42,11 +41,30 @@ async fn consume_messages_from_rabbitmq() -> Result<(), Box<dyn std::error::Erro
     Ok(())
 }
 
+fn extract_filepath(message: &str) -> Option<&str> {
+    let path_prefix = "Path: ";
+    if let Some(start) = message.find(path_prefix) {
+        let path_start = start + path_prefix.len();
+        if let Some(end) = message[path_start..].find('\n') {
+            return Some(&message[path_start..path_start + end]);
+        }
+    }
+    None
+}
+
 fn process_image(filepath: &str) {
-    let img = image::open(filepath).unwrap();
-    let thumbnail = img.thumbnail(200, 200);
-    let thumbnail_path = filepath.replace(".jpg", "_thumbnail.jpg");
-    thumbnail.save(thumbnail_path).unwrap();
+    match image::open(filepath) {
+        Ok(img) => {
+            let thumbnail = img.thumbnail(200, 200);
+            let thumbnail_path = format!("{}_thumbnail.png", filepath.trim_end_matches(".png"));
+            if let Err(e) = thumbnail.save(&thumbnail_path) {
+                println!("Failed to save thumbnail: {}", e);
+            } else {
+                println!("Thumbnail saved to: {}", thumbnail_path);
+            }
+        }
+        Err(e) => println!("Failed to open image: {}", e),
+    }
 }
 
 // **Real-time Updates with WebSockets**

@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
             },
+            credentials: 'include',
             body: JSON.stringify({
                 query: mutation,
                 variables,
