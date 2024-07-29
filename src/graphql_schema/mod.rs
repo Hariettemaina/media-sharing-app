@@ -3,6 +3,7 @@ use async_graphql::SimpleObject;
 pub mod images;
 pub mod users;
 pub mod videos;
+pub mod payments;
 
 use self::images::mutation::ImageMut;
 use self::users::mutation::UserMut;

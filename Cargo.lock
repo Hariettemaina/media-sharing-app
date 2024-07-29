@@ -2882,6 +2882,7 @@ dependencies = [
  "async-graphql-actix-web",
  "async-std",
  "async-stream",
+ "base64 0.22.1",
  "chrono",
  "diesel",
  "diesel-async",

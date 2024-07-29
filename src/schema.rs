@@ -27,6 +27,22 @@ diesel::table! {
 }
 
 diesel::table! {
+    transactions (id) {
+        id -> Int4,
+        user_id -> Int4,
+        photo_id -> Int4,
+        amount -> Int8,
+        #[max_length = 20]
+        mpesa_number -> Nullable<Varchar>,
+        #[max_length = 255]
+        mpesa_transaction_id -> Nullable<Varchar>,
+        #[max_length = 50]
+        status -> Nullable<Varchar>,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     users (id) {
         id -> Int4,
         first_name -> Varchar,
@@ -58,11 +74,14 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(transactions -> images (photo_id));
+diesel::joinable!(transactions -> users (user_id));
 diesel::joinable!(users -> email_address (user_email));
 
 diesel::allow_tables_to_appear_in_same_query!(
     email_address,
     images,
+    transactions,
     users,
     videos,
 );

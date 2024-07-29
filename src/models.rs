@@ -1,4 +1,4 @@
-use crate::schema::{email_address, images, users, videos};
+use crate::schema::{email_address, images, transactions, users, videos};
 use async_graphql::{InputObject, SimpleObject};
 use chrono::{NaiveDate, NaiveDateTime};
 use diesel::{query_builder::AsChangeset, Insertable, Queryable, Selectable};
@@ -114,16 +114,31 @@ pub struct NewVideos {
 }
 
 
-// id -> Int4,
-//         title -> Varchar,
-//         description -> Nullable<Varchar>,
-//         codec_name -> Nullable<Varchar>,
-//         duration -> Nullable<Varchar>,
-//         file_path -> Varchar,
-//         width -> Nullable<Int4>,
-//         height -> Nullable<Int4>,
-//         bitrate -> Nullable<Varchar>,
-//         frame_rate -> Nullable<Varchar>,
+#[derive(InputObject, SimpleObject, Debug, Queryable, Selectable, Clone)]
+#[diesel(table_name = transactions)]
+pub struct Transaction {
+    pub id: i32,
+    pub user_id: i32,
+    pub photo_id: i32,
+    pub amount: i32,
+    pub mpesa_number: Option<String>,
+    pub mpesa_transaction_id: Option<String>,
+    pub status: Option<String>,
+    pub created_at: NaiveDateTime,    
+}
+
+// diesel::table! {
+//     transactions (id) {
+//         id -> Int4,
+//         user_id -> Int4,
+//         photo_id -> Int4,
+//         amount -> Int4,
+//         #[max_length = 20]
+//         mpesa_number -> Nullable<Varchar>,
+//         #[max_length = 255]
+//         mpesa_transaction_id -> Nullable<Varchar>,
+//         #[max_length = 50]
+//         status -> Nullable<Varchar>,
 //         created_at -> Timestamp,
-//         uploaded_by -> Int4,
-//         deleted_at -> Nullable<Timestamp>,
+//     }
+// }
