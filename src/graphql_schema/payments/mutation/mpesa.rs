@@ -1,15 +1,14 @@
+use crate::schema::transactions;
+use crate::PhotoError;
+use async_graphql::Error;
 use async_graphql::{Context, InputObject, Object, Result};
 use base64::{engine::general_purpose, Engine as _};
 use chrono::Utc;
 use diesel::ExpressionMethods;
 use diesel_async::pooled_connection::deadpool::Pool;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
-use futures::TryFutureExt;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-
-use crate::schema::transactions;
-use crate::PhotoError;
 use std::env;
 
 #[derive(Default)]
@@ -36,7 +35,7 @@ impl PurchasePhoto {
         // Send M-Pesa STK push
         let stk_push_result = send_stk_push(&input.phone_number, input.amount as f64)
             .await
-            .map_err(|e| async_graphql::Error::new(format!("M-Pesa payment failed: {}", e)))?;
+            .map_err(|e| async_graphql::Error::new(format!("M-Pesa payment failed: {:?}", e)))?;
 
         if !stk_push_result.is_successful {
             return Err(async_graphql::Error::new(
@@ -55,11 +54,11 @@ impl PurchasePhoto {
             ))
             .returning(transactions::id)
             .get_result::<i32>(&mut conn)
+            .await
             .map_err(|e| {
-                log::error!("Failed to insert purchase into database: {}", e);
+                log::error!("Failed to insert purchase into database: {:?}", e);
                 PhotoError::DatabaseError
-            })
-            .await?;
+            })?;
 
         Ok(format!(
             "Photo purchased successfully. Purchase ID: {}",
@@ -101,10 +100,7 @@ struct StkPushResult {
     transaction_id: String,
 }
 
-async fn send_stk_push(
-    phone_number: &str,
-    amount: f64,
-) -> Result<StkPushResult, Box<dyn std::error::Error>> {
+async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushResult, Error> {
     let mpesa_env = env::var("MPESA_ENVIRONMENT").unwrap_or_else(|_| "sandbox".to_string());
     let base_url = if mpesa_env == "live" {
         "https://api.safaricom.co.ke"
@@ -115,8 +111,10 @@ async fn send_stk_push(
     let client = Client::new();
 
     // Generate authorization token
-    let consumer_key = env::var("MPESA_CONSUMER_KEY")?;
-    let consumer_secret = env::var("MPESA_CONSUMER_SECRET")?;
+    let consumer_key = env::var("MPESA_CONSUMER_KEY")
+        .map_err(|e| Error::new(format!("Env var error: {:?}", e)))?;
+    let consumer_secret = env::var("MPESA_CONSUMER_SECRET")
+        .map_err(|e| Error::new(format!("Env var error: {:?}", e)))?;
     let auth = general_purpose::STANDARD.encode(format!("{}:{}", consumer_key, consumer_secret));
 
     let token_resp: TokenResponse = client
@@ -126,19 +124,26 @@ async fn send_stk_push(
         ))
         .header("Authorization", format!("Basic {}", auth))
         .send()
-        .await?
+        .await
+        .map_err(|e| Error::new(format!("Request error: {:?}", e)))?
         .json()
-        .await?;
+        .await
+        .map_err(|e| Error::new(format!("Json error: {:?}", e)))?;
 
     // Prepare STK push request
     let timestamp = Utc::now().format("%Y%m%d%H%M%S").to_string();
-    let shortcode = env::var("MPESA_SHORTCODE")?;
-    let passkey = env::var("MPESA_PASSKEY")?;
+    let shortcode =
+        env::var("MPESA_SHORTCODE").map_err(|e| Error::new(format!("Env var error: {:?}", e)))?;
+    let passkey =
+        env::var("MPESA_PASSKEY").map_err(|e| Error::new(format!("Env var error: {:?}", e)))?;
     let password =
         general_purpose::STANDARD.encode(format!("{}{}{}", shortcode, passkey, timestamp));
 
     // Remove non-digits from the phone number and format it to ensure it starts with "254"
-    let cleaned_number = phone_number.chars().filter(|c| c.is_digit(10)).collect::<String>();
+    let cleaned_number = phone_number
+        .chars()
+        .filter(|c| c.is_digit(10))
+        .collect::<String>();
     let formatted_phone = format!("254{}", &cleaned_number[cleaned_number.len() - 9..]);
 
     let stk_request = StkPushRequest {
@@ -168,8 +173,20 @@ async fn send_stk_push(
         .json()
         .await?;
 
-    Ok(StkPushResult {
-        is_successful: resp.response_code == "0",
-        transaction_id: resp.checkout_request_id,
-    })
+    if resp.response_code != "0" {
+        log::warn!(
+            "M-Pesa STK Push failed: {} (Merchant Request ID: {})",
+            resp.response_description,
+            resp.merchant_request_id
+        );
+        return Ok(StkPushResult {
+            is_successful: false,
+            transaction_id: resp.checkout_request_id,
+        });
+    } else {
+        return  Ok(StkPushResult{
+            is_successful: true,
+            transaction_id: resp.checkout_request_id,
+        });
+    }
 }

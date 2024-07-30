@@ -8,12 +8,14 @@ pub mod payments;
 use self::images::mutation::ImageMut;
 use self::users::mutation::UserMut;
 use self::videos::mutation::VideoMut;
+use self::payments::mutation::MpesaMut;
 
 #[derive(SimpleObject, Default)]
 pub struct Mutation {
     pub users: UserMut,
     pub images: ImageMut,
-    pub videos: VideoMut
+    pub videos: VideoMut,
+    pub payments: MpesaMut
 }
 
 use self::users::query::UsersQuery;
