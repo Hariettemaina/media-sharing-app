@@ -32,12 +32,26 @@ impl PurchasePhoto {
         let pool: &Pool<AsyncPgConnection> = ctx.data()?;
         let mut conn = pool.get().await?;
 
+        // Log input data
+        log::info!(
+            "Processing photo purchase request: user_id={}, photo_id={}, amount={}, phone_number={}",
+            input.user_id,
+            input.photo_id,
+            input.amount,
+            input.phone_number
+        );
+
         // Send M-Pesa STK push
         let stk_push_result = send_stk_push(&input.phone_number, input.amount as f64)
             .await
             .map_err(|e| async_graphql::Error::new(format!("M-Pesa payment failed: {:?}", e)))?;
 
         if !stk_push_result.is_successful {
+            log::warn!(
+                "M-Pesa payment not successful for phone_number={} and amount={}",
+                input.phone_number,
+                input.amount
+            );
             return Err(async_graphql::Error::new(
                 "M-Pesa payment was not successful",
             ));
@@ -59,6 +73,12 @@ impl PurchasePhoto {
                 log::error!("Failed to insert purchase into database: {:?}", e);
                 PhotoError::DatabaseError
             })?;
+
+        log::info!(
+            "Photo purchased successfully. Purchase ID: {} for user_id={}",
+            purchase_id,
+            input.user_id
+        );
 
         Ok(format!(
             "Photo purchased successfully. Purchase ID: {}",
@@ -108,6 +128,8 @@ async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushResult,
         "https://sandbox.safaricom.co.ke"
     };
 
+    log::info!("Using M-Pesa environment: {}", mpesa_env);
+
     let client = Client::new();
 
     // Generate authorization token
@@ -130,6 +152,8 @@ async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushResult,
         .await
         .map_err(|e| Error::new(format!("Json error: {:?}", e)))?;
 
+    log::info!("Generated access token for M-Pesa API");
+
     // Prepare STK push request
     let timestamp = Utc::now().format("%Y%m%d%H%M%S").to_string();
     let shortcode =
@@ -145,6 +169,12 @@ async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushResult,
         .filter(|c| c.is_digit(10))
         .collect::<String>();
     let formatted_phone = format!("254{}", &cleaned_number[cleaned_number.len() - 9..]);
+
+    log::info!(
+        "Formatted phone number for M-Pesa: {} -> {}",
+        phone_number,
+        formatted_phone
+    );
 
     let stk_request = StkPushRequest {
         business_short_code: shortcode.clone(),
@@ -183,10 +213,15 @@ async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushResult,
             is_successful: false,
             transaction_id: resp.checkout_request_id,
         });
-    } else {
-        return  Ok(StkPushResult{
-            is_successful: true,
-            transaction_id: resp.checkout_request_id,
-        });
     }
+
+    log::info!(
+        "M-Pesa STK Push successful: Checkout Request ID: {}",
+        resp.checkout_request_id
+    );
+
+    Ok(StkPushResult {
+        is_successful: true,
+        transaction_id: resp.checkout_request_id,
+    })
 }
