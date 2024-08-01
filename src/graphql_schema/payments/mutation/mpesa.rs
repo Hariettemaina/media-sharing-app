@@ -25,7 +25,7 @@ pub struct PurchasePhotoInput {
 #[Object]
 impl PurchasePhoto {
     pub async fn purchase_photo(
-        &self,
+        &self,                                                                                                                                                   
         ctx: &Context<'_>,
         input: PurchasePhotoInput,
     ) -> Result<String> {
@@ -87,15 +87,15 @@ impl PurchasePhoto {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 struct StkPushRequest {
-    business_short_code: String,
+    business_short_code: i32,
     password: String,
     timestamp: String,
     transaction_type: String,
     amount: String,
     party_a: String,
-    party_b: String,
+    party_b: i32,
     phone_number: String,
     call_back_url: String,
     account_reference: String,
@@ -110,7 +110,7 @@ struct StkPushResponse {
     merchant_request_id: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct TokenResponse {
     access_token: String,
 }
@@ -124,8 +124,10 @@ async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushResult,
     let mpesa_env = env::var("MPESA_ENVIRONMENT").unwrap_or_else(|_| "sandbox".to_string());
     let base_url = if mpesa_env == "live" {
         "https://api.safaricom.co.ke"
-    } else {
+    } else if mpesa_env == "sandbox" {
         "https://sandbox.safaricom.co.ke"
+    } else {
+        return Err(Error::new("Invalid MPESA_ENVIRONMENT"));
     };
 
     log::info!("Using M-Pesa environment: {}", mpesa_env);
@@ -153,11 +155,13 @@ async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushResult,
         .map_err(|e| Error::new(format!("Json error: {:?}", e)))?;
 
     log::info!("Generated access token for M-Pesa API");
+    println!("Token Response: {:?}", token_resp);
 
     // Prepare STK push request
     let timestamp = Utc::now().format("%Y%m%d%H%M%S").to_string();
-    let shortcode =
-        env::var("MPESA_SHORTCODE").map_err(|e| Error::new(format!("Env var error: {:?}", e)))?;
+    let shortcode = 174379;
+    // let shortcode =
+    //     env::var("MPESA_SHORTCODE").map_err(|e| Error::new(format!("Env var error: {:?}", e)))?;
     let passkey =
         env::var("MPESA_PASSKEY").map_err(|e| Error::new(format!("Env var error: {:?}", e)))?;
     let password =
@@ -176,6 +180,7 @@ async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushResult,
         formatted_phone
     );
 
+    // Prepare STK push request
     let stk_request = StkPushRequest {
         business_short_code: shortcode.clone(),
         password,
@@ -190,8 +195,11 @@ async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushResult,
         transaction_desc: "Photo purchase".to_string(),
     };
 
+    log::info!("STK Push Request Payload: {:?}", stk_request);
+    log::info!("Using Business ShortCode: {}", shortcode);
+
     // Send STK push request
-    let resp: StkPushResponse = client
+    let resp = client
         .post(&format!("{}/mpesa/stkpush/v1/processrequest", base_url))
         .header(
             "Authorization",
@@ -199,9 +207,19 @@ async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushResult,
         )
         .json(&stk_request)
         .send()
-        .await?
-        .json()
-        .await?;
+        .await
+        .map_err(|e| Error::new(format!("Request error: {:?}", e)))?;
+
+    // Log the raw response body
+    let body = resp
+        .text()
+        .await
+        .map_err(|e| Error::new(format!("Error reading response body: {:?}", e)))?;
+    log::info!("M-Pesa STK Push response body: {}", body);
+    
+
+    let resp: StkPushResponse = serde_json::from_str(&body)
+        .map_err(|e| Error::new(format!("Json decode error: {:?}", e)))?;
 
     if resp.response_code != "0" {
         log::warn!(
