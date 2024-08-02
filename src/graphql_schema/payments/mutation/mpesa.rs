@@ -25,7 +25,7 @@ pub struct PurchasePhotoInput {
 #[Object]
 impl PurchasePhoto {
     pub async fn purchase_photo(
-        &self,                                                                                                                                                   
+        &self,
         ctx: &Context<'_>,
         input: PurchasePhotoInput,
     ) -> Result<String> {
@@ -88,7 +88,7 @@ impl PurchasePhoto {
 }
 
 #[derive(Serialize, Debug)]
-struct StkPushRequest {
+pub struct StkPushRequest {
     business_short_code: i32,
     password: String,
     timestamp: String,
@@ -102,8 +102,8 @@ struct StkPushRequest {
     transaction_desc: String,
 }
 
-#[derive(Deserialize)]
-struct StkPushResponse {
+#[derive(Deserialize, Debug)]
+pub struct StkPushResponse {
     checkout_request_id: String,
     response_code: String,
     response_description: String,
@@ -111,16 +111,16 @@ struct StkPushResponse {
 }
 
 #[derive(Deserialize, Debug)]
-struct TokenResponse {
+pub struct TokenResponse {
     access_token: String,
 }
 
-struct StkPushResult {
+pub struct StkPushResult {
     is_successful: bool,
     transaction_id: String,
 }
 
-async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushResult, Error> {
+pub async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushResult, Error> {
     let mpesa_env = env::var("MPESA_ENVIRONMENT").unwrap_or_else(|_| "sandbox".to_string());
     let base_url = if mpesa_env == "live" {
         "https://api.safaricom.co.ke"
@@ -190,7 +190,7 @@ async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushResult,
         party_a: formatted_phone.clone(),
         party_b: shortcode,
         phone_number: formatted_phone,
-        call_back_url: "https://mydomain.com/path".to_string(),
+        call_back_url: "https://8bce-197-232-155-144.ngrok-free.app".to_string(),
         account_reference: phone_number.to_string(),
         transaction_desc: "Photo purchase".to_string(),
     };
@@ -198,8 +198,8 @@ async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushResult,
     log::info!("STK Push Request Payload: {:?}", stk_request);
     log::info!("Using Business ShortCode: {}", shortcode);
 
-    // Send STK push request
-    let resp = client
+    // Send STK push request 
+    let resp = match client
         .post(&format!("{}/mpesa/stkpush/v1/processrequest", base_url))
         .header(
             "Authorization",
@@ -208,15 +208,30 @@ async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushResult,
         .json(&stk_request)
         .send()
         .await
-        .map_err(|e| Error::new(format!("Request error: {:?}", e)))?;
+    {
+        Ok(response) => response,
+        Err(e) => {
+            log::error!("Failed to send STK push request: {:?}", e);
+            return Err(Error::new(format!("Request error: {:?}", e)));
+        }
+    };
 
     // Log the raw response body
-    let body = resp
-        .text()
-        .await
-        .map_err(|e| Error::new(format!("Error reading response body: {:?}", e)))?;
-    log::info!("M-Pesa STK Push response body: {}", body);
-    
+    let body = match resp.text().await {
+        Ok(text) => {
+            log::info!("M-Pesa STK Push raw response: {}", text);
+            text
+        }
+        Err(e) => {
+            log::error!("Failed to read response body: {:?}", e);
+            return Err(Error::new(format!("Error reading response body: {:?}", e)));
+        }
+    };
+
+    if body.is_empty() {
+        log::warn!("Received empty response from M-Pesa API");
+        return Err(Error::new("Received empty response from M-Pesa API"));
+    }
 
     let resp: StkPushResponse = serde_json::from_str(&body)
         .map_err(|e| Error::new(format!("Json decode error: {:?}", e)))?;
