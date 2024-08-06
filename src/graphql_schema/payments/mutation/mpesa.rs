@@ -3,7 +3,7 @@ use crate::PhotoError;
 use async_graphql::Error;
 use async_graphql::{Context, InputObject, Object, Result};
 use base64::{engine::general_purpose, Engine as _};
-use chrono::Utc;
+use chrono::{FixedOffset, Utc};
 use diesel::ExpressionMethods;
 use diesel_async::pooled_connection::deadpool::Pool;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
@@ -16,8 +16,6 @@ pub struct PurchasePhoto;
 
 #[derive(InputObject)]
 pub struct PurchasePhotoInput {
-    pub user_id: i32,
-    pub photo_id: i32,
     pub amount: i64,
     pub phone_number: String,
 }
@@ -32,17 +30,13 @@ impl PurchasePhoto {
         let pool: &Pool<AsyncPgConnection> = ctx.data()?;
         let mut conn = pool.get().await?;
 
-        // Log input data
         log::info!(
-            "Processing photo purchase request: user_id={}, photo_id={}, amount={}, phone_number={}",
-            input.user_id,
-            input.photo_id,
+            "Processing photo purchase request: amount={}, phone_number={}",
             input.amount,
             input.phone_number
         );
 
-        // Send M-Pesa STK push
-        let stk_push_result = send_stk_push(&input.phone_number, input.amount as f64)
+        let stk_push_result = send_stk_push(&input.phone_number, input.amount as i32)
             .await
             .map_err(|e| async_graphql::Error::new(format!("M-Pesa payment failed: {:?}", e)))?;
 
@@ -57,11 +51,8 @@ impl PurchasePhoto {
             ));
         }
 
-        // Record the purchase in the database
         let purchase_id: i32 = diesel::insert_into(transactions::table)
             .values((
-                transactions::user_id.eq(input.user_id),
-                transactions::photo_id.eq(input.photo_id),
                 transactions::amount.eq(input.amount),
                 transactions::mpesa_transaction_id.eq(&stk_push_result.transaction_id),
                 transactions::created_at.eq(Utc::now().naive_utc()),
@@ -75,9 +66,8 @@ impl PurchasePhoto {
             })?;
 
         log::info!(
-            "Photo purchased successfully. Purchase ID: {} for user_id={}",
+            "Photo purchased successfully. Purchase ID: {} ",
             purchase_id,
-            input.user_id
         );
 
         Ok(format!(
@@ -93,7 +83,7 @@ pub struct StkPushRequest {
     password: String,
     timestamp: String,
     transaction_type: String,
-    amount: String,
+    amount: i32,
     party_a: String,
     party_b: i32,
     phone_number: String,
@@ -104,10 +94,10 @@ pub struct StkPushRequest {
 
 #[derive(Deserialize, Debug)]
 pub struct StkPushResponse {
-    checkout_request_id: String,
-    response_code: String,
-    response_description: String,
-    merchant_request_id: String,
+    merchant_request_id: Option<String>,
+    checkout_request_id: Option<String>,
+    response_code: Option<String>,
+    response_description: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -120,21 +110,18 @@ pub struct StkPushResult {
     transaction_id: String,
 }
 
-pub async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushResult, Error> {
+pub async fn send_stk_push(phone_number: &str, amount: i32) -> Result<StkPushResult, Error> {
     let mpesa_env = env::var("MPESA_ENVIRONMENT").unwrap_or_else(|_| "sandbox".to_string());
     let base_url = if mpesa_env == "live" {
         "https://api.safaricom.co.ke"
-    } else if mpesa_env == "sandbox" {
-        "https://sandbox.safaricom.co.ke"
     } else {
-        return Err(Error::new("Invalid MPESA_ENVIRONMENT"));
+        "https://sandbox.safaricom.co.ke"
     };
 
     log::info!("Using M-Pesa environment: {}", mpesa_env);
 
     let client = Client::new();
 
-    // Generate authorization token
     let consumer_key = env::var("MPESA_CONSUMER_KEY")
         .map_err(|e| Error::new(format!("Env var error: {:?}", e)))?;
     let consumer_secret = env::var("MPESA_CONSUMER_SECRET")
@@ -154,20 +141,19 @@ pub async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushRes
         .await
         .map_err(|e| Error::new(format!("Json error: {:?}", e)))?;
 
-    log::info!("Generated access token for M-Pesa API");
-    println!("Token Response: {:?}", token_resp);
+    log::info!("Generated access token for M-Pesa API: {:?}", token_resp);
 
-    // Prepare STK push request
-    let timestamp = Utc::now().format("%Y%m%d%H%M%S").to_string();
+    let timestamp = Utc::now()
+        .with_timezone(&FixedOffset::east_opt(3 * 3600).unwrap())
+        .format("%Y%m%d%H%M%S")
+        .to_string();
+
     let shortcode = 174379;
-    // let shortcode =
-    //     env::var("MPESA_SHORTCODE").map_err(|e| Error::new(format!("Env var error: {:?}", e)))?;
     let passkey =
         env::var("MPESA_PASSKEY").map_err(|e| Error::new(format!("Env var error: {:?}", e)))?;
     let password =
         general_purpose::STANDARD.encode(format!("{}{}{}", shortcode, passkey, timestamp));
 
-    // Remove non-digits from the phone number and format it to ensure it starts with "254"
     let cleaned_number = phone_number
         .chars()
         .filter(|c| c.is_digit(10))
@@ -180,17 +166,16 @@ pub async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushRes
         formatted_phone
     );
 
-    // Prepare STK push request
     let stk_request = StkPushRequest {
         business_short_code: shortcode.clone(),
         password,
         timestamp,
         transaction_type: "CustomerPayBillOnline".to_string(),
-        amount: amount.to_string(),
+        amount,
         party_a: formatted_phone.clone(),
-        party_b: shortcode,
+        party_b: 174379,
         phone_number: formatted_phone,
-        call_back_url: "https://8bce-197-232-155-144.ngrok-free.app".to_string(),
+        call_back_url: "https://23fd-197-232-155-144.ngrok-free.app".to_string(),
         account_reference: phone_number.to_string(),
         transaction_desc: "Photo purchase".to_string(),
     };
@@ -198,35 +183,27 @@ pub async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushRes
     log::info!("STK Push Request Payload: {:?}", stk_request);
     log::info!("Using Business ShortCode: {}", shortcode);
 
-    // Send STK push request 
-    let resp = match client
+    let resp = client
         .post(&format!("{}/mpesa/stkpush/v1/processrequest", base_url))
         .header(
             "Authorization",
             format!("Bearer {}", token_resp.access_token),
         )
+        .header("Content-Type", "application/json")
         .json(&stk_request)
         .send()
         .await
-    {
-        Ok(response) => response,
-        Err(e) => {
+        .map_err(|e| {
             log::error!("Failed to send STK push request: {:?}", e);
-            return Err(Error::new(format!("Request error: {:?}", e)));
-        }
-    };
+            Error::new(format!("Request error: {:?}", e))
+        })?;
 
-    // Log the raw response body
-    let body = match resp.text().await {
-        Ok(text) => {
-            log::info!("M-Pesa STK Push raw response: {}", text);
-            text
-        }
-        Err(e) => {
-            log::error!("Failed to read response body: {:?}", e);
-            return Err(Error::new(format!("Error reading response body: {:?}", e)));
-        }
-    };
+    let body = resp.text().await.map_err(|e| {
+        log::error!("Failed to read response body: {:?}", e);
+        Error::new(format!("Error reading response body: {:?}", e))
+    })?;
+
+    log::info!("M-Pesa STK Push raw response: {}", body);
 
     if body.is_empty() {
         log::warn!("Received empty response from M-Pesa API");
@@ -236,25 +213,30 @@ pub async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushRes
     let resp: StkPushResponse = serde_json::from_str(&body)
         .map_err(|e| Error::new(format!("Json decode error: {:?}", e)))?;
 
-    if resp.response_code != "0" {
+    if resp.response_code != Some("0".to_string()) {
         log::warn!(
-            "M-Pesa STK Push failed: {} (Merchant Request ID: {})",
-            resp.response_description,
+            "M-Pesa STK Push failed: {} (Merchant Request ID: {:?})",
+            resp.response_description
+                .unwrap_or_else(|| "Unknown error".to_string()),
             resp.merchant_request_id
         );
         return Ok(StkPushResult {
             is_successful: false,
-            transaction_id: resp.checkout_request_id,
+            transaction_id: resp
+                .merchant_request_id
+                .unwrap_or_else(|| "Unknown".to_string()),
         });
     }
 
     log::info!(
-        "M-Pesa STK Push successful: Checkout Request ID: {}",
+        "M-Pesa STK Push successful: Checkout Request ID: {:?}",
         resp.checkout_request_id
     );
 
     Ok(StkPushResult {
         is_successful: true,
-        transaction_id: resp.checkout_request_id,
+        transaction_id: resp
+            .checkout_request_id
+            .unwrap_or_else(|| "Unknown".to_string()),
     })
 }

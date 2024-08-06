@@ -68,7 +68,7 @@ async fn main() -> Result<(), InternalError> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
     let api_key = dotenvy::var("BREVO_API_KEY").expect("BREVO_API_KEY must be set.");
     let email = dotenvy::var("BREVO_EMAIL").expect("BREVO_EMAIL must be set.");
-    // let ngrok_url = dotenvy::var("NGROK_URL").expect("NGROK_URL must be set.");
+    let ngrok_url = dotenvy::var("NGROK_URL").expect("NGROK_URL must be set.");
 
     let brevo_api = BrevoApi::new(api_key, email);
 
@@ -103,7 +103,7 @@ async fn main() -> Result<(), InternalError> {
     HttpServer::new(move || {
         let cors = Cors::default()
             .allowed_origin("http://localhost:8080")
-            // .allowed_origin(&ngrok_url)
+            .allowed_origin(&ngrok_url)
             .allowed_origin_fn(|origin, _req_head| origin.as_bytes().ends_with(b".rust-lang.org"))
             .allowed_methods(vec!["GET", "POST"])
             .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
