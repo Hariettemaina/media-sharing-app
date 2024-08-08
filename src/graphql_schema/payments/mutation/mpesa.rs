@@ -183,7 +183,7 @@ pub async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushRes
         party_a: formatted_phone.clone(),
         party_b: shortcode.to_string(),
         phone_number: formatted_phone,
-        call_back_url: "https://4d17-197-232-155-144.ngrok-free.app ".to_string(),
+        call_back_url: "https://eo37phjdoipk5z2.m.pipedream.net".to_string(),
         account_reference: "Test".to_string(),
         transaction_desc: "Test".to_string(),
     };
@@ -191,13 +191,13 @@ pub async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushRes
     log::info!("STK Push Request Payload: {:?}", stk_request);
 
     let resp = client
-        .post(&format!("{}/mpesa/stkpush/v1/processrequest", base_url))
+        .post("https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest")
         .header(
             "Authorization",
             format!("Bearer {}", token_resp.access_token),
         )
         .header("Content-Type", "application/json")
-        .json(&stk_request)
+        .json(&stk_request) 
         .send()
         .await
         .map_err(|e| {
