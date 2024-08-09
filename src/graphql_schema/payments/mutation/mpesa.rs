@@ -16,8 +16,8 @@ pub struct PurchasePhoto;
 
 #[derive(InputObject)]
 pub struct PurchasePhotoInput {
-    pub user_id: i32,
-    pub photo_id: i32,
+    // pub user_id: i32,
+    // pub photo_id: i32,
     pub amount: i64,
     pub phone_number: String,
 }
@@ -57,8 +57,8 @@ impl PurchasePhoto {
 
         let purchase_id: i32 = diesel::insert_into(transactions::table)
             .values((
-                transactions::user_id.eq(input.user_id),
-                transactions::photo_id.eq(input.photo_id),
+                // transactions::user_id.eq(input.user_id),
+                // transactions::photo_id.eq(input.photo_id),
                 transactions::amount.eq(input.amount),
                 transactions::mpesa_transaction_id.eq(&stk_push_result.transaction_id),
                 transactions::created_at.eq(Utc::now().naive_utc()),
@@ -85,45 +85,39 @@ impl PurchasePhoto {
 
 #[derive(Serialize, Debug)]
 pub struct StkPushRequest {
-    business_short_code: String,
-    password: String,
-    timestamp: String,
-    transaction_type: String,
-    amount: String,
-    party_a: String,
-    party_b: String,
-    phone_number: String,
-    call_back_url: String,
-    account_reference: String,
-    transaction_desc: String,
+    pub business_short_code: String,
+    pub password: String,
+    pub timestamp: String,
+    pub transaction_type: String,
+    pub amount: String,
+    pub party_a: String,
+    pub party_b: String,
+    pub phone_number: String,
+    pub call_back_url: String,
+    pub account_reference: String,
+    pub transaction_desc: String,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct StkPushResponse {
-    merchant_request_id: Option<String>,
-    checkout_request_id: Option<String>,
-    response_code: Option<String>,
-    response_description: Option<String>,
+    pub merchant_request_id: Option<String>,
+    pub checkout_request_id: Option<String>,
+    pub response_code: Option<String>,
+    pub response_description: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct TokenResponse {
-    access_token: String,
+   pub access_token: String,
 }
 
 pub struct StkPushResult {
-    is_successful: bool,
-    transaction_id: String,
+    pub is_successful: bool,
+    pub transaction_id: String,
 }
 
 pub async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushResult, Error> {
     let mpesa_env = env::var("MPESA_ENVIRONMENT").unwrap_or_else(|_| "sandbox".to_string());
-    let base_url = if mpesa_env == "live" {
-        "https://api.safaricom.co.ke"
-    } else {
-        "https://sandbox.safaricom.co.ke"
-    };
-
     log::info!("Using M-Pesa environment: {}", mpesa_env);
 
     let client = Client::new();
@@ -135,10 +129,7 @@ pub async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushRes
     let auth = general_purpose::STANDARD.encode(format!("{}:{}", consumer_key, consumer_secret));
 
     let token_resp: TokenResponse = client
-        .get(&format!(
-            "{}/oauth/v1/generate?grant_type=client_credentials",
-            base_url
-        ))
+        .get("https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials")
         .header("Authorization", format!("Basic {}", auth))
         .send()
         .await
@@ -154,7 +145,7 @@ pub async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushRes
         .format("%Y%m%d%H%M%S")
         .to_string();
 
-    let shortcode = 174379;
+    let shortcode = "174379";
     let passkey =
         env::var("MPESA_PASSKEY").map_err(|e| Error::new(format!("Env var error: {:?}", e)))?;
     let password =
@@ -183,7 +174,7 @@ pub async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushRes
         party_a: formatted_phone.clone(),
         party_b: shortcode.to_string(),
         phone_number: formatted_phone,
-        call_back_url: "https://eo37phjdoipk5z2.m.pipedream.net".to_string(),
+        call_back_url: "https://prime-fairly-honeybee.ngrok-free.app".to_string(),
         account_reference: "Test".to_string(),
         transaction_desc: "Test".to_string(),
     };
@@ -197,7 +188,7 @@ pub async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushRes
             format!("Bearer {}", token_resp.access_token),
         )
         .header("Content-Type", "application/json")
-        .json(&stk_request) 
+        .json(&stk_request)
         .send()
         .await
         .map_err(|e| {

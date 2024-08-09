@@ -6,7 +6,6 @@ document.addEventListener('DOMContentLoaded', function () {
     let websocket;
     const uploadedImages = new Set();
 
-    
     const currentUserID = localStorage.getItem("userId");
 
     function initWebSocket() {
@@ -36,13 +35,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const mediaUpdate = message.payload.data.mediaUpdates;
             const imageUrl = extractImageUrl(mediaUpdate.message);
             const uploaderUserId = mediaUpdate.userId;
-            // const uploaderUserName = mediaUpdate.userName;
             alert(`${uploaderUserId} (ID: ${uploaderUserId}) has uploaded an image!`);
 
-
             appendImageToGrid(imageUrl, false);
-
-            
         }
     }
 
@@ -71,10 +66,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }));
     }
-
-    // function alertUser(userId, imageUrl) {
-    //     alert(`User ${userId} has uploaded a new image: ${imageUrl}`);
-    // }
 
     uploadForm.addEventListener('submit', async function (event) {
         event.preventDefault();
@@ -128,21 +119,31 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function appendImageToGrid(imageUrl, isInitialLoad = false) {
         if (imageUrl && !uploadedImages.has(imageUrl)) {
-            console.log('Appending image: ${imageUrl}');
+            console.log(`Appending image: ${imageUrl}`);
+            const imgContainer = document.createElement('div');
+            imgContainer.className = 'image-container';
+
             const imgElement = document.createElement('img');
             imgElement.src = imageUrl;
             imgElement.style.width = '100%';
             imgElement.style.height = 'auto';
-            mediaGrid.appendChild(imgElement);
+
+            const buyButton = document.createElement('button');
+            buyButton.textContent = 'Buy';
+            buyButton.className = 'buy-button';
+            buyButton.onclick = () => initiatePhotosPurchase(imageUrl);
+
+            imgContainer.appendChild(imgElement);
+            imgContainer.appendChild(buyButton);
+            mediaGrid.appendChild(imgContainer);
             uploadedImages.add(imageUrl);
             if (!isInitialLoad) {
                 storeImageInLocal(imageUrl);
             }
         } else {
-            console.log(`Image URL already exists: ${imageUrl}`); // Debugging log
+            console.log(`Image URL already exists: ${imageUrl}`);
         }
     }
-
 
     function storeImageInLocal(imageUrl) {
         const storedImages = JSON.parse(localStorage.getItem('uploadedimages')) || [];
@@ -152,10 +153,67 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    async function initiatePhotosPurchase(imageUrl) {
+        const userId = localStorage.getItem("userId");
+        if (!userId) {
+            alert('Please login to purchase photos.');
+            return;
+        }
+
+        const photoId = extractPhotoIdFromUrl(imageUrl);
+        const amount = 100; // Set a fixed price or implement dynamic pricing
+        const phoneNumber = prompt("Enter your phone number for M-Pesa payment:");
+
+        if (!phoneNumber) {
+            alert('Phone number is required for payment.');
+            return;
+        }
+
+        try {
+            const response = await fetch('http://localhost:8080', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    query: `
+                        mutation PurchasePhoto($input: PurchasePhotoInput!) {
+    payments {
+        purchasePhoto(input: $input)
+    }
+}
+                    `,
+                    variables: {
+                        input: {
+                            // userId: parseInt(userId),
+                            // photoId: parseInt(photoId),
+                            amount: amount,
+                            phoneNumber: phoneNumber
+                        }
+                    }
+                }),
+            });
+
+            const result = await response.json();
+            if (result.errors) {
+                throw new Error(result.errors[0].message);
+            }
+
+            alert(result.data.purchasePhoto);
+        } catch (error) {
+            console.error('Error purchasing photo:', error);
+            alert('Failed to purchase photo. Please try again.');
+        }
+    }
+
+    function extractPhotoIdFromUrl(url) {
+        const matches = url.match(/\/(\d+)\.jpg$/);
+        return matches ? matches[1] : null;
+    }
+
     initWebSocket();
     loadStoredImages();
 });
-
 
 // function getUserIdFromCookie() {
 //     var key, value, i;

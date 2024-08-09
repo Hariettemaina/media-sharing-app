@@ -128,7 +128,7 @@ async fn main() -> Result<(), InternalError> {
                     .to(index_ws),
             )
             .service(
-                web::resource("/")
+                web::resource("/graphiql")
                     .guard(guard::Get())
                     .to(index_graphiql),
             )
