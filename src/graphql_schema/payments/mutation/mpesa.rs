@@ -108,7 +108,8 @@ pub struct StkPushResponse {
 
 #[derive(Deserialize, Debug)]
 pub struct TokenResponse {
-   pub access_token: String,
+    pub access_token: String,
+    pub expires_in: String,
 }
 
 pub struct StkPushResult {
@@ -139,6 +140,15 @@ pub async fn send_stk_push(phone_number: &str, amount: f64) -> Result<StkPushRes
         .map_err(|e| Error::new(format!("Failed to parse access token response: {:?}", e)))?;
 
     log::info!("Generated access token for M-Pesa API: {:?}", token_resp);
+
+    let now = Utc::now();
+    let expires_at =
+        now + chrono::Duration::seconds(token_resp.expires_in.parse::<u64>().unwrap_or_default().try_into().unwrap());
+
+    // Check if the token is expired
+    if now > expires_at {
+        return Err(Error::new("Access token has expired."));
+    }
 
     let timestamp = Utc::now()
         .with_timezone(&FixedOffset::east_opt(3 * 3600).unwrap())
